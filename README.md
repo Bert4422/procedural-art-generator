@@ -89,11 +89,16 @@ Math functions available: `sin cos tan sqrt abs pow log floor ceil PI`
 | Harmonograph | Abstract |
 | Recursive Subdivision | Abstract |
 | Fourier Curves | Abstract |
+| Lissajous Web | Abstract |
+| String Art | Abstract |
+| Voronoi | Abstract |
 | Plasma Field | Psychedelic |
 | Domain Warp | Psychedelic |
 | Mandala | Psychedelic |
 | Reaction-Diffusion | Psychedelic |
 | Fractal IFS | Psychedelic |
+| Julia Set | Psychedelic |
+| Wave Interference | Psychedelic |
 | Flow Field | Organic |
 | Space Colonization | Organic |
 

@@ -378,21 +378,44 @@ const ALG_PARAMS = {
     {id:'repScale',   label:'Repulsion',     min:0.3,  max:3,    step:0.1,  def:1,    fmt:v=>v.toFixed(1)},
     {id:'distScale',  label:'Spacing',       min:0.3,  max:3,    step:0.1,  def:1,    fmt:v=>v.toFixed(1)},
   ],
+  lissajous: [
+    {id:'lineCount',  label:'Curves',        min:1,    max:12,   step:1,    def:5,    fmt:v=>v|0},
+    {id:'lineWidth',  label:'Line Width',    min:0.3,  max:4,    step:0.1,  def:1,    fmt:v=>v.toFixed(1)},
+  ],
+  stringart: [
+    {id:'points',     label:'Points',        min:30,   max:300,  step:10,   def:120,  fmt:v=>v|0},
+    {id:'offset',     label:'Skip',          min:2,    max:80,   step:1,    def:0,    fmt:v=>v|0},
+    {id:'rings',      label:'Rings',         min:1,    max:5,    step:1,    def:2,    fmt:v=>v|0},
+  ],
+  voronoi: [
+    {id:'cells',      label:'Cells',         min:4,    max:60,   step:1,    def:18,   fmt:v=>v|0},
+    {id:'edgeWidth',  label:'Edge Width',    min:2,    max:30,   step:1,    def:12,   fmt:v=>v|0},
+  ],
+  julia: [
+    {id:'juliaPreset',label:'Shape',         type:'select', options:[0,1,2,3,4,5,6,7,8,9,10,11], def:0,
+     optLabels:['Douady Rabbit','Spiral','Dendrite','Siegel Disc','Lightning','Cauliflower','Star','Frost','Antenna','Pinwheel','Seahorse','Nebula']},
+    {id:'zoom',       label:'Zoom',          min:0.5,  max:5,    step:0.1,  def:1.5,  fmt:v=>v.toFixed(1)},
+  ],
+  waveinterference: [
+    {id:'sources',    label:'Sources',       min:2,    max:8,    step:1,    def:3,    fmt:v=>v|0},
+    {id:'freq',       label:'Frequency',     min:0.3,  max:4,    step:0.1,  def:1,    fmt:v=>v.toFixed(1)},
+  ],
 };
 
 // ═══ Algorithms ═══════════════════════════════════════════════════════
 const ALGOS = {
-  abstract:    ['attractor','harmonograph','subdivision','fourier'],
-  psychedelic: ['plasma','domainwarp','mandala','reactiondiffusion','fractalifs'],
+  abstract:    ['attractor','harmonograph','subdivision','fourier','lissajous','stringart','voronoi'],
+  psychedelic: ['plasma','domainwarp','mandala','reactiondiffusion','fractalifs','julia','waveinterference'],
   organic:     ['flowfield','spacecolonization'],
 };
 const ALGO_NAMES = {
   attractor:'Strange Attractor', harmonograph:'Harmonograph',
   subdivision:'Recursive Subdivision', fourier:'Fourier Curves',
+  lissajous:'Lissajous Web', stringart:'String Art', voronoi:'Voronoi',
   plasma:'Plasma Field', domainwarp:'Domain Warp',
   mandala:'Mandala', reactiondiffusion:'Reaction-Diffusion',
-  fractalifs:'Fractal IFS', flowfield:'Flow Field',
-  spacecolonization:'Space Colonization',
+  fractalifs:'Fractal IFS', julia:'Julia Set', waveinterference:'Wave Interference',
+  flowfield:'Flow Field', spacecolonization:'Space Colonization',
   differentialgrowth:'Differential Growth', // kept for manual selection only
 };
 
@@ -530,13 +553,13 @@ function buildTunePanel(alg) {
       const sel = document.createElement('select');
       sel.id = 'tp_'+d.id; sel.className = ''; // inherit .og select
       sel.style.cssText = 'width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.72);padding:8px 10px;font:12px system-ui,sans-serif;border-radius:4px;cursor:pointer;-webkit-appearance:none;appearance:none;outline:none';
-      for (const o of d.options) {
+      d.options.forEach((o, oi) => {
         const opt = document.createElement('option');
-        opt.value = o; opt.textContent = o;
+        opt.value = o; opt.textContent = d.optLabels ? d.optLabels[oi] || o : o;
         opt.style.background = '#1a1a1a';
         if (o === d.def) opt.selected = true;
         sel.appendChild(opt);
-      }
+      });
       wrap.appendChild(sel);
     } else {
       const row = document.createElement('div');
@@ -1129,6 +1152,217 @@ function renderDifferentialGrowth(p, done) {
   step();
 }
 
+// ═══ Lissajous Web ═══════════════════════════════════════════════════
+function renderLissajous(p) {
+  const rng = mkrng(p.seed), cplx = p.complexity;
+  const n  = p.tune?.lineCount != null ? (p.tune.lineCount|0) : 3 + Math.floor(cplx * 0.6);
+  const lw = p.tune?.lineWidth ?? 1;
+  fillBg(p.palette);
+  ctx.globalCompositeOperation = 'lighter';
+  const rx = W * 0.44, ry = H * 0.44;
+  const steps = 6000 + cplx * 600;
+  for (let ci = 0; ci < n; ci++) {
+    const a = 1 + Math.floor(rng() * 9), b = 1 + Math.floor(rng() * 9);
+    const delta = rng() * Math.PI * 2;
+    const palT  = 0.2 + ci / n * 0.75;
+    // Thick glow undercoat
+    ctx.beginPath();
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps * Math.PI * 2;
+      const x = W/2 + rx * Math.sin(a * t + delta);
+      const y = H/2 + ry * Math.sin(b * t);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = cstr(p.palette, palT, 0.03 + cplx * 0.003);
+    ctx.lineWidth = (2.5 + rng()) * lw;
+    ctx.stroke();
+    // Fine bright line
+    ctx.beginPath();
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps * Math.PI * 2;
+      const x = W/2 + rx * Math.sin(a * t + delta);
+      const y = H/2 + ry * Math.sin(b * t);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = cstr(p.palette, palT + 0.15, 0.07 + cplx * 0.006);
+    ctx.lineWidth = 0.6 * lw;
+    ctx.stroke();
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  bloom(0.28, 2.5);
+}
+
+// ═══ String Art ═══════════════════════════════════════════════════════
+function renderStringArt(p) {
+  const rng = mkrng(p.seed), cplx = p.complexity;
+  const numPts = p.tune?.points != null ? (p.tune.points|0) : 80 + Math.floor(cplx * 12);
+  const rings  = p.tune?.rings  != null ? (p.tune.rings|0)  : 2 + Math.floor(cplx * 0.2);
+  fillBg(p.palette);
+  ctx.globalCompositeOperation = 'lighter';
+  for (let ri = 0; ri < rings; ri++) {
+    // Each ring gets a random offset (skip amount between connected points)
+    const rawOff = p.tune?.offset > 0 ? (p.tune.offset|0) : Math.floor(numPts * (0.28 + rng() * 0.22));
+    const offset = Math.max(2, rawOff);
+    const scaleX = 0.3 + ri * 0.12 + rng() * 0.06;
+    const scaleY = 0.3 + ri * 0.12 + rng() * 0.06;
+    const cx = W / 2 + (rng() - 0.5) * W * 0.04;
+    const cy = H / 2 + (rng() - 0.5) * H * 0.04;
+    const palOff = ri / rings;
+    for (let i = 0; i < numPts; i++) {
+      const a1 = i / numPts * Math.PI * 2;
+      const a2 = ((i + offset) % numPts) / numPts * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a1) * W * scaleX, cy + Math.sin(a1) * H * scaleY);
+      ctx.lineTo(cx + Math.cos(a2) * W * scaleX, cy + Math.sin(a2) * H * scaleY);
+      ctx.strokeStyle = cstr(p.palette, (palOff + i / numPts * 0.35) % 1, 0.022 + cplx * 0.002);
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  bloom(0.3, 2);
+}
+
+// ═══ Voronoi ══════════════════════════════════════════════════════════
+function renderVoronoi(p) {
+  const rng = mkrng(p.seed), cplx = p.complexity, s = p.seed;
+  const nc = p.tune?.cells != null ? (p.tune.cells|0) : 8 + Math.floor(cplx * 3);
+  const ew = p.tune?.edgeWidth != null ? p.tune.edgeWidth : 12;
+  // Jittered grid placement so cells are reasonably distributed
+  const cols = Math.ceil(Math.sqrt(nc * W / H));
+  const rows = Math.ceil(nc / cols);
+  const pts  = [];
+  for (let r = 0; r < rows && pts.length < nc; r++) {
+    for (let c = 0; c < cols && pts.length < nc; c++) {
+      pts.push({
+        x: (c + 0.12 + rng() * 0.76) / cols * W,
+        y: (r + 0.12 + rng() * 0.76) / rows * H,
+        t: rng()
+      });
+    }
+  }
+  const scale = 2;
+  const iw = W / scale | 0, ih = H / scale | 0;
+  const id = new ImageData(iw, ih);
+  for (let y = 0; y < ih; y++) {
+    for (let x = 0; x < iw; x++) {
+      const wx = x * scale, wy = y * scale;
+      let d1 = Infinity, d2 = Infinity, near = 0;
+      for (let i = 0; i < pts.length; i++) {
+        const d = Math.hypot(wx - pts[i].x, wy - pts[i].y);
+        if (d < d1) { d2 = d1; d1 = d; near = i; } else if (d < d2) d2 = d;
+      }
+      const edgeFactor = Math.max(0, 1 - (d2 - d1) / ew);
+      // depth shading: cells are lighter toward edges of the canvas (adds 3D feel)
+      const depth = Math.pow(Math.max(0, 1 - d1 / (Math.min(W,H) * 0.45)), 1.2) * 0.25;
+      let t = pts[near].t * (1 - edgeFactor * 0.72) * 0.88 + depth;
+      t = Math.max(0, Math.min(0.97, t));
+      if (p.formula) t = evalFormula(p.formula, x / iw, y / ih, t, s);
+      const [r, g, b] = palRGB(p.palette, t);
+      const j = (y * iw + x) * 4;
+      id.data[j] = r; id.data[j+1] = g; id.data[j+2] = b; id.data[j+3] = 255;
+    }
+  }
+  const off = mkoff(iw, ih);
+  off.getContext('2d').putImageData(id, 0, 0);
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(off, 0, 0, W, H);
+}
+
+// ═══ Julia Set ════════════════════════════════════════════════════════
+function renderJulia(p) {
+  const rng = mkrng(p.seed), cplx = p.complexity, s = p.seed;
+  const JULIA_PRESETS = [
+    [-0.7,    0.27  ],  // 0 Douady Rabbit
+    [-0.4,    0.6   ],  // 1 Spiral
+    [ 0.285,  0.01  ],  // 2 Dendrite
+    [-0.835, -0.232 ],  // 3 Siegel Disc
+    [-0.7269, 0.1889],  // 4 Lightning
+    [ 0.45,   0.1428],  // 5 Cauliflower
+    [-0.624,  0.435 ],  // 6 Star
+    [-0.1,    0.651 ],  // 7 Frost
+    [ 0.0,    0.8   ],  // 8 Antenna
+    [-0.75,   0.0   ],  // 9 Pinwheel
+    [-0.5,    0.5   ],  // 10 Seahorse
+    [ 0.35,   0.35  ],  // 11 Nebula
+  ];
+  const presetRaw = p.tune?.juliaPreset;
+  const presetIdx = (presetRaw != null ? (+presetRaw) : Math.floor(rng() * JULIA_PRESETS.length)) % JULIA_PRESETS.length;
+  const [cr, ci2] = JULIA_PRESETS[presetIdx];
+  const zoom = p.tune?.zoom ?? 1.3 + rng() * 0.5;
+  const maxIter = Math.min(180, 60 + cplx * 14) | 0;
+  const scale = 1.5;
+  const iw = W / scale | 0, ih = H / scale | 0;
+  const id = new ImageData(iw, ih);
+  const aspect = iw / ih;
+  const log2 = Math.log(2);
+  for (let y = 0; y < ih; y++) {
+    for (let x = 0; x < iw; x++) {
+      let zr = (x / iw - 0.5) * 3.5 / zoom * aspect;
+      let zi = (y / ih - 0.5) * 3.5 / zoom;
+      let iter = 0, zr2 = zr*zr, zi2 = zi*zi;
+      while (zr2 + zi2 < 16 && iter < maxIter) {
+        zi = 2*zr*zi + ci2; zr = zr2 - zi2 + cr;
+        zr2 = zr*zr; zi2 = zi*zi; iter++;
+      }
+      let t;
+      if (iter >= maxIter) {
+        t = 0.03; // interior — dark
+      } else {
+        // Smooth (continuous) iteration count for clean colour bands
+        const smooth = iter + 1 - Math.log(Math.log(Math.sqrt(zr2 + zi2))) / log2;
+        t = ((smooth / maxIter) * 4) % 1;
+      }
+      if (p.formula) t = evalFormula(p.formula, x / iw, y / ih, t, s);
+      const [r, g, b] = palRGB(p.palette, Math.max(0, Math.min(0.97, t)));
+      const j = (y * iw + x) * 4;
+      id.data[j] = r; id.data[j+1] = g; id.data[j+2] = b; id.data[j+3] = 255;
+    }
+  }
+  const off = mkoff(iw, ih);
+  off.getContext('2d').putImageData(id, 0, 0);
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(off, 0, 0, W, H);
+}
+
+// ═══ Wave Interference ════════════════════════════════════════════════
+function renderWaveInterference(p) {
+  const rng = mkrng(p.seed), cplx = p.complexity, s = p.seed;
+  const ns   = p.tune?.sources != null ? (p.tune.sources|0) : 3 + Math.floor(cplx * 0.3);
+  const fMul = p.tune?.freq ?? 1;
+  const srcs = Array.from({length: ns}, () => ({
+    x:     W * (0.08 + rng() * 0.84),
+    y:     H * (0.08 + rng() * 0.84),
+    freq:  (5 + rng() * 18) * fMul,
+    phase: rng() * Math.PI * 2,
+    amp:   0.5 + rng() * 0.5
+  }));
+  const scale = 1.5;
+  const iw = W / scale | 0, ih = H / scale | 0;
+  const id = new ImageData(iw, ih);
+  const totalAmp = srcs.reduce((a, s) => a + s.amp, 0);
+  for (let y = 0; y < ih; y++) {
+    for (let x = 0; x < iw; x++) {
+      const wx = x * scale, wy = y * scale;
+      let v = 0;
+      for (const src of srcs) {
+        const d = Math.hypot(wx - src.x, wy - src.y);
+        v += Math.sin(d * src.freq * 0.0075 + src.phase) * src.amp;
+      }
+      v /= totalAmp;
+      let t = Math.pow((v + 1) / 2, 0.88);
+      if (p.formula) t = evalFormula(p.formula, x / iw, y / ih, t, s);
+      const [r, g, b] = palRGB(p.palette, Math.max(0, Math.min(0.97, t)));
+      const j = (y * iw + x) * 4;
+      id.data[j] = r; id.data[j+1] = g; id.data[j+2] = b; id.data[j+3] = 255;
+    }
+  }
+  const off = mkoff(iw, ih);
+  off.getContext('2d').putImageData(id, 0, 0);
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(off, 0, 0, W, H);
+}
+
 // ═══ Placeholder — drawn instantly before async renders ══════════════
 function drawPlaceholder(palKey, seed) {
   const s=seed;
@@ -1175,17 +1409,22 @@ function dispatch(p, done) {
   const finish=()=>{applySymmetry(p.symmetry);done();};
   if(p.algorithm==='reactiondiffusion') return renderReactionDiffusion(p,finish);
   if(p.algorithm==='differentialgrowth') return renderDifferentialGrowth(p,finish);
-  if(p.algorithm==='attractor')         renderAttractor(p);
-  else if(p.algorithm==='harmonograph') renderHarmonograph(p);
-  else if(p.algorithm==='subdivision')  renderSubdivision(p);
-  else if(p.algorithm==='fourier')      renderFourier(p);
-  else if(p.algorithm==='plasma')       renderPlasma(p);
-  else if(p.algorithm==='domainwarp')   renderDomainWarp(p);
-  else if(p.algorithm==='mandala')      renderMandala(p);
-  else if(p.algorithm==='fractalifs')   renderFractalIFS(p);
-  else if(p.algorithm==='flowfield')    renderFlowField(p);
+  if(p.algorithm==='attractor')              renderAttractor(p);
+  else if(p.algorithm==='harmonograph')      renderHarmonograph(p);
+  else if(p.algorithm==='subdivision')       renderSubdivision(p);
+  else if(p.algorithm==='fourier')           renderFourier(p);
+  else if(p.algorithm==='lissajous')         renderLissajous(p);
+  else if(p.algorithm==='stringart')         renderStringArt(p);
+  else if(p.algorithm==='voronoi')           renderVoronoi(p);
+  else if(p.algorithm==='plasma')            renderPlasma(p);
+  else if(p.algorithm==='domainwarp')        renderDomainWarp(p);
+  else if(p.algorithm==='mandala')           renderMandala(p);
+  else if(p.algorithm==='fractalifs')        renderFractalIFS(p);
+  else if(p.algorithm==='julia')             renderJulia(p);
+  else if(p.algorithm==='waveinterference')  renderWaveInterference(p);
+  else if(p.algorithm==='flowfield')         renderFlowField(p);
   else if(p.algorithm==='spacecolonization') renderSpaceColonization(p);
-  else if(p.algorithm==='metaballs')    renderMetaballs(p);
+  else if(p.algorithm==='metaballs')         renderMetaballs(p);
   finish();
 }
 

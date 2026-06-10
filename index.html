@@ -50,17 +50,25 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:no
 #bFwd{left:calc(50% + 20px)}
 #bBack:hover,#bFwd:hover{color:#fff;border-color:rgba(255,255,255,.3)}
 #bBack:disabled,#bFwd:disabled{opacity:.2;cursor:default}
-#timeline{
-  position:fixed;bottom:26px;left:50%;transform:translateX(-50%);
-  display:flex;gap:7px;align-items:center;max-width:75vw;overflow:hidden;
-  padding:4px 6px;pointer-events:all;
+#tlwrap{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:5px;pointer-events:all;
 }
+#timeline{display:flex;gap:9px;align-items:center;}
 .dot{
-  width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.18);
-  cursor:pointer;transition:all .2s;flex-shrink:0;
+  width:8px;height:8px;border-radius:50%;
+  background:transparent;border:1.5px solid rgba(255,255,255,.32);
+  cursor:pointer;transition:all .15s;flex-shrink:0;
 }
-.dot.cur{background:rgba(255,255,255,.85);width:9px;height:9px}
-.dot:hover{background:rgba(255,255,255,.5)}
+.dot.cur{background:#fff;border-color:#fff;}
+.dot:hover{border-color:rgba(255,255,255,.75);}
+.tlarr{
+  background:none;border:none;color:rgba(255,255,255,.28);
+  font-size:15px;cursor:pointer;padding:0 3px;line-height:1;
+  transition:color .15s;user-select:none;-webkit-user-select:none;
+}
+.tlarr:hover{color:rgba(255,255,255,.75)}
+.tlarr:disabled{opacity:.12;cursor:default;pointer-events:none}
 /* Panel */
 #panel{
   position:fixed;top:70px;right:20px;width:272px;
@@ -89,6 +97,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:no
   border-radius:4px;cursor:pointer;-webkit-appearance:none;appearance:none;
 }
 .og select:focus{outline:none;border-color:rgba(255,255,255,.28)}
+.og select option{background:#1a1a1a;color:rgba(255,255,255,.85);}
+.og select optgroup{background:#111;color:rgba(255,255,255,.4);}
 .srow{display:flex;align-items:center;gap:10px}
 .srow input{flex:1;background:rgba(255,255,255,.1);border:none;border-radius:2px;height:4px;accent-color:rgba(255,255,255,.6);cursor:pointer}
 .sv{font:11px 'Courier New',monospace;color:rgba(255,255,255,.38);width:16px;text-align:right}
@@ -121,7 +131,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:no
   <button class="btn" id="bSave" onclick="savePNG()">Save PNG</button>
   <button id="bBack" onclick="goBack()">&#8592;</button>
   <button id="bFwd" onclick="goForward()">&#8594;</button>
-  <div id="timeline"></div>
+  <div id="tlwrap">
+    <button class="tlarr" id="tlLeft" onclick="tlScroll(-1)">&#8249;</button>
+    <div id="timeline"></div>
+    <button class="tlarr" id="tlRight" onclick="tlScroll(1)">&#8250;</button>
+  </div>
 </div>
 
 <div id="panel">
@@ -260,6 +274,7 @@ const PAL = {
   obsidian:  [[0,0,0],[9,4,7],[28,12,18],[68,28,38],[128,58,68],[198,118,108],[255,198,188]],
 };
 const PAL_KEYS = Object.keys(PAL);
+const RANDOM_PAL_KEYS = PAL_KEYS.filter(k => !['mono','chalk','obsidian'].includes(k));
 
 // ═══ Seeded RNG ═══════════════════════════════════════════════════════
 function mkrng(seed) {
@@ -752,7 +767,7 @@ function buildParams() {
   let alg=document.getElementById('sAlg').value;
   if(alg==='random') alg=ALGOS[fam][Math.random()*ALGOS[fam].length|0];
   let pal=document.getElementById('sPal').value;
-  if(pal==='random') pal=PAL_KEYS[Math.random()*PAL_KEYS.length|0];
+  if(pal==='random') pal=RANDOM_PAL_KEYS[Math.random()*RANDOM_PAL_KEYS.length|0];
   return {family:fam,algorithm:alg,palette:pal,complexity:+document.getElementById('sComp').value,
           symmetry:document.getElementById('sSym').value,orientation:orient,seed:Math.random()*9999999|0};
 }
@@ -780,15 +795,35 @@ function goBack()    { if(hIdx>0&&!busy){hIdx--;renderParams(hist[hIdx]);} }
 function goForward() { if(hIdx<hist.length-1&&!busy){hIdx++;renderParams(hist[hIdx]);} }
 
 // ═══ Timeline ════════════════════════════════════════════════════════
+const TL_VIS = 14; // dots visible at once
+let tlOffset = 0;  // first visible index in hist
+
+function tlScroll(dir) {
+  const max = Math.max(0, hist.length - TL_VIS);
+  tlOffset = Math.max(0, Math.min(max, tlOffset + dir));
+  updateTimeline();
+}
+
 function updateTimeline() {
-  const tl=document.getElementById('timeline'); tl.innerHTML='';
-  const vis=22, start=Math.max(0,Math.min(hIdx-vis/2|0,hist.length-vis));
-  for(let i=start;i<Math.min(hist.length,start+vis);i++){
-    const d=document.createElement('div'); d.className='dot'+(i===hIdx?' cur':'');
-    const mid=PAL[hist[i].palette]; if(mid){const c=mid[Math.floor(mid.length/2)];d.style.background=`rgb(${c[0]},${c[1]},${c[2]})`;}
-    const idx=i; d.onclick=()=>{if(!busy){hIdx=idx;renderParams(hist[idx]);}};
+  // Keep selected dot in view
+  if (hIdx < tlOffset) tlOffset = hIdx;
+  if (hIdx >= tlOffset + TL_VIS) tlOffset = hIdx - TL_VIS + 1;
+  tlOffset = Math.max(0, Math.min(Math.max(0, hist.length - TL_VIS), tlOffset));
+
+  const tl = document.getElementById('timeline'); tl.innerHTML = '';
+  const end = Math.min(hist.length, tlOffset + TL_VIS);
+  for (let i = tlOffset; i < end; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === hIdx ? ' cur' : '');
+    const idx = i;
+    d.onclick = () => { if (!busy) { hIdx = idx; renderParams(hist[idx]); } };
     tl.appendChild(d);
   }
+
+  const canLeft  = tlOffset > 0;
+  const canRight = tlOffset + TL_VIS < hist.length;
+  document.getElementById('tlLeft').disabled  = !canLeft;
+  document.getElementById('tlRight').disabled = !canRight;
 }
 function updateNav() {
   document.getElementById('bBack').disabled=hIdx<=0;

@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Abstract</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:none}
+#c{position:fixed;top:0;left:0;display:block;width:100vw;height:100vh}
+#loading{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  color:rgba(255,255,255,.25);font:11px/1 system-ui,sans-serif;
+  letter-spacing:4px;text-transform:uppercase;pointer-events:none;display:none;
+}
+#ui{position:fixed;inset:0;pointer-events:none;transition:opacity .4s}
+#ui>*{pointer-events:all}
+.btn{
+  position:fixed;background:rgba(0,0,0,.5);backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.1);
+  color:rgba(255,255,255,.7);font:12px/1 system-ui,sans-serif;letter-spacing:.5px;
+  padding:10px 16px;cursor:pointer;border-radius:6px;
+  transition:background .2s,color .2s,border-color .2s;user-select:none;-webkit-user-select:none;
+}
+.btn:hover{background:rgba(0,0,0,.7);color:#fff;border-color:rgba(255,255,255,.25)}
+.btn:active{background:rgba(0,0,0,.85)}
+.btn.lit{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.3);color:#fff}
+#bInv{top:20px;left:20px}
+#bHide{
+  top:20px;left:50%;transform:translateX(-50%);
+  background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.05);
+  color:rgba(255,255,255,.18);pointer-events:all;position:fixed;
+}
+#bHide:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.4);border-color:rgba(255,255,255,.12)}
+#bOpt{top:20px;right:20px}
+#bRand{bottom:68px;left:20px}
+#bSave{bottom:68px;right:20px}
+#bBack,#bFwd{
+  position:fixed;bottom:68px;width:38px;height:38px;
+  background:rgba(0,0,0,.5);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.5);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  border-radius:6px;font-size:16px;transition:all .2s;user-select:none;-webkit-user-select:none;
+}
+#bBack{left:calc(50% - 58px)}
+#bFwd{left:calc(50% + 20px)}
+#bBack:hover,#bFwd:hover{color:#fff;border-color:rgba(255,255,255,.3)}
+#bBack:disabled,#bFwd:disabled{opacity:.2;cursor:default}
+#timeline{
+  position:fixed;bottom:26px;left:50%;transform:translateX(-50%);
+  display:flex;gap:7px;align-items:center;max-width:75vw;overflow:hidden;
+  padding:4px 6px;pointer-events:all;
+}
+.dot{
+  width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.18);
+  cursor:pointer;transition:all .2s;flex-shrink:0;
+}
+.dot.cur{background:rgba(255,255,255,.85);width:9px;height:9px}
+.dot:hover{background:rgba(255,255,255,.5)}
+/* Panel */
+#panel{
+  position:fixed;top:70px;right:20px;width:272px;
+  background:rgba(7,7,7,.93);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid rgba(255,255,255,.1);border-radius:10px;
+  box-shadow:0 10px 50px rgba(0,0,0,.65);
+  flex-direction:column;overflow:hidden;z-index:200;touch-action:none;
+  display:none;
+}
+#panel.open{display:flex}
+#ph{
+  padding:14px 16px;font:11px/1 system-ui,sans-serif;letter-spacing:2.5px;
+  text-transform:uppercase;color:rgba(255,255,255,.35);
+  border-bottom:1px solid rgba(255,255,255,.07);cursor:grab;
+  display:flex;justify-content:space-between;align-items:center;user-select:none;
+}
+#ph:active{cursor:grabbing}
+#pclose{color:rgba(255,255,255,.3);cursor:pointer;font-size:17px;line-height:1;padding:0 2px}
+#pclose:hover{color:rgba(255,255,255,.8)}
+#pbody{padding:14px;display:flex;flex-direction:column;gap:13px;overflow-y:auto;max-height:72vh}
+.og{display:flex;flex-direction:column;gap:5px}
+.og label{font:10px/1 system-ui,sans-serif;letter-spacing:2.5px;text-transform:uppercase;color:rgba(255,255,255,.28)}
+.og select{
+  width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+  color:rgba(255,255,255,.72);padding:8px 10px;font:12px system-ui,sans-serif;
+  border-radius:4px;cursor:pointer;-webkit-appearance:none;appearance:none;
+}
+.og select:focus{outline:none;border-color:rgba(255,255,255,.28)}
+.srow{display:flex;align-items:center;gap:10px}
+.srow input{flex:1;background:rgba(255,255,255,.1);border:none;border-radius:2px;height:4px;accent-color:rgba(255,255,255,.6);cursor:pointer}
+.sv{font:11px 'Courier New',monospace;color:rgba(255,255,255,.38);width:16px;text-align:right}
+.orow{display:flex;gap:8px}
+.ob{
+  flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);
+  color:rgba(255,255,255,.35);padding:8px;font:11px system-ui,sans-serif;
+  letter-spacing:1px;text-transform:uppercase;cursor:pointer;border-radius:4px;transition:all .2s;
+}
+.ob.on{background:rgba(255,255,255,.11);border-color:rgba(255,255,255,.28);color:rgba(255,255,255,.88)}
+#pgen{
+  width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);
+  color:rgba(255,255,255,.8);padding:11px;font:11px system-ui,sans-serif;
+  letter-spacing:2.5px;text-transform:uppercase;cursor:pointer;border-radius:4px;
+  transition:all .2s;margin-top:3px;
+}
+#pgen:hover{background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.28);color:#fff}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="loading">Generating</div>
+
+<button class="btn" id="bHide" onclick="toggleUI()">&#9898;</button>
+
+<div id="ui">
+  <button class="btn" id="bInv" onclick="toggleInvert()">Invert</button>
+  <button class="btn" id="bOpt" onclick="togglePanel()">Settings</button>
+  <button class="btn" id="bRand" onclick="generate()">Random</button>
+  <button class="btn" id="bSave" onclick="savePNG()">Save PNG</button>
+  <button id="bBack" onclick="goBack()">&#8592;</button>
+  <button id="bFwd" onclick="goForward()">&#8594;</button>
+  <div id="timeline"></div>
+</div>
+
+<div id="panel">
+  <div id="ph"><span>Settings</span><span id="pclose" onclick="togglePanel()">×</span></div>
+  <div id="pbody">
+    <div class="og">
+      <label>Family</label>
+      <select id="sFam" onchange="rebuildAlgos()">
+        <option value="random">Random</option>
+        <option value="abstract">Abstract</option>
+        <option value="psychedelic">Psychedelic</option>
+        <option value="organic">Organic</option>
+      </select>
+    </div>
+    <div class="og">
+      <label>Algorithm</label>
+      <select id="sAlg"><option value="random">Random</option></select>
+    </div>
+    <div class="og">
+      <label>Palette</label>
+      <select id="sPal">
+        <option value="random">Random</option>
+        <optgroup label="Psychedelic">
+          <option value="acid">Acid</option>
+          <option value="aurora">Aurora</option>
+          <option value="plasma">Plasma</option>
+          <option value="chromatic">Chromatic</option>
+          <option value="neon">Neon</option>
+        </optgroup>
+        <optgroup label="Organic">
+          <option value="fungal">Fungal</option>
+          <option value="lush">Lush</option>
+          <option value="biolum">Bioluminescent</option>
+          <option value="mycelium">Mycelium</option>
+          <option value="spore">Spore</option>
+        </optgroup>
+        <optgroup label="Warm">
+          <option value="magma">Magma</option>
+          <option value="sunset">Sunset</option>
+          <option value="ember">Ember</option>
+          <option value="rust">Rust</option>
+        </optgroup>
+        <optgroup label="Cool">
+          <option value="cosmic">Cosmic</option>
+          <option value="deepocean">Deep Ocean</option>
+          <option value="crystal">Crystal</option>
+          <option value="arctic">Arctic</option>
+        </optgroup>
+        <optgroup label="Minimal">
+          <option value="mono">Monochrome</option>
+          <option value="chalk">Chalk</option>
+          <option value="obsidian">Obsidian</option>
+        </optgroup>
+      </select>
+    </div>
+    <div class="og">
+      <label>Complexity</label>
+      <div class="srow">
+        <input type="range" id="sComp" min="1" max="10" value="5"
+               oninput="document.getElementById('vComp').textContent=this.value">
+        <span class="sv" id="vComp">5</span>
+      </div>
+    </div>
+    <div class="og">
+      <label>Symmetry</label>
+      <select id="sSym">
+        <option value="none">None</option>
+        <option value="mirror">Mirror</option>
+        <option value="mirrorxy">Mirror XY</option>
+        <option value="radial3">Radial × 3</option>
+        <option value="radial4">Radial × 4</option>
+        <option value="radial6">Radial × 6</option>
+        <option value="radial8">Radial × 8</option>
+      </select>
+    </div>
+    <div class="og">
+      <label>Orientation</label>
+      <div class="orow">
+        <button class="ob on" id="bLand" onclick="setOrient('landscape')">Landscape</button>
+        <button class="ob" id="bPort" onclick="setOrient('portrait')">Portrait</button>
+      </div>
+    </div>
+    <button id="pgen" onclick="generate()">Generate</button>
+  </div>
+</div>
+
+<script>
+// ═══ Canvas & State ═══════════════════════════════════════════════════
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+let W=0, H=0;
+let orient   = 'landscape';
+let inverted = false;
+let uiHidden = false;
+let hist     = [], hIdx = -1;
+let busy     = false, cancelFlag = false;
+
+// ═══ Algorithms ═══════════════════════════════════════════════════════
+const ALGOS = {
+  abstract:    ['attractor','harmonograph','subdivision','fourier'],
+  psychedelic: ['plasma','domainwarp','mandala','reactiondiffusion','fractalifs'],
+  organic:     ['flowfield','spacecolonization','metaballs','differentialgrowth'],
+};
+const ALGO_NAMES = {
+  attractor:'Strange Attractor', harmonograph:'Harmonograph',
+  subdivision:'Recursive Subdivision', fourier:'Fourier Curves',
+  plasma:'Plasma Field', domainwarp:'Domain Warp',
+  mandala:'Mandala', reactiondiffusion:'Reaction-Diffusion',
+  fractalifs:'Fractal IFS', flowfield:'Flow Field',
+  spacecolonization:'Space Colonization', metaballs:'Metaballs',
+  differentialgrowth:'Differential Growth',
+};
+
+// ═══ Palettes — gradient stop arrays [r,g,b] ══════════════════════════
+const PAL = {
+  acid:      [[8,0,12],[80,0,120],[200,0,200],[255,80,0],[255,220,0],[180,255,50],[255,255,255]],
+  aurora:    [[0,5,12],[0,35,60],[0,100,70],[20,190,120],[100,255,170],[200,240,255],[255,255,255]],
+  plasma:    [[4,0,8],[55,0,75],[150,0,140],[230,50,100],[255,130,0],[255,240,60],[255,255,255]],
+  chromatic: [[8,0,4],[190,0,60],[255,40,210],[40,0,255],[0,180,255],[100,255,200],[255,255,255]],
+  neon:      [[0,0,0],[30,0,60],[0,180,180],[180,0,255],[255,0,120],[255,255,0],[255,255,255]],
+  fungal:    [[4,2,0],[28,10,4],[65,30,8],[115,60,18],[160,100,48],[200,150,95],[235,215,185]],
+  lush:      [[0,4,0],[4,22,4],[14,55,8],[28,95,18],[58,145,28],[115,195,75],[200,240,155]],
+  biolum:    [[0,2,6],[0,12,35],[0,38,75],[0,95,115],[0,195,145],[45,255,195],[200,255,240]],
+  mycelium:  [[7,4,9],[32,18,38],[78,45,85],[138,85,126],[190,138,165],[222,188,208],[248,238,248]],
+  spore:     [[2,1,0],[20,10,15],[60,30,50],[120,60,90],[185,110,140],[230,170,190],[255,230,240]],
+  magma:     [[0,0,0],[38,0,0],[115,8,0],[218,55,0],[255,135,0],[255,215,45],[255,255,195]],
+  sunset:    [[4,0,8],[55,0,55],[178,18,75],[255,75,45],[255,155,38],[255,218,115],[255,248,220]],
+  ember:     [[4,1,0],[38,4,0],[118,18,0],[195,58,0],[255,115,18],[255,195,75],[255,248,200]],
+  rust:      [[3,1,0],[45,12,4],[115,42,8],[188,75,18],[228,128,48],[244,182,108],[255,238,200]],
+  cosmic:    [[0,0,4],[4,0,18],[18,0,55],[55,8,115],[115,28,175],[178,95,238],[240,200,255]],
+  deepocean: [[0,2,6],[0,8,28],[0,22,65],[0,55,115],[0,115,155],[18,195,205],[145,238,255]],
+  crystal:   [[2,4,9],[8,22,48],[18,55,115],[38,115,198],[75,178,255],[158,218,255],[228,248,255]],
+  arctic:    [[4,7,14],[14,28,58],[28,68,128],[58,128,198],[118,188,238],[188,228,255],[242,252,255]],
+  mono:      [[0,0,0],[18,18,18],[55,55,55],[115,115,115],[178,178,178],[218,218,218],[255,255,255]],
+  chalk:     [[4,4,4],[28,26,23],[75,70,65],[138,132,126],[195,188,183],[232,228,224],[252,250,248]],
+  obsidian:  [[0,0,0],[9,4,7],[28,12,18],[68,28,38],[128,58,68],[198,118,108],[255,198,188]],
+};
+const PAL_KEYS = Object.keys(PAL);
+
+// ═══ Seeded RNG ═══════════════════════════════════════════════════════
+function mkrng(seed) {
+  let s = (seed ^ 0x9e3779b9) >>> 0;
+  return () => {
+    s ^= s << 13; s ^= s >> 17; s ^= s << 5;
+    return (s >>> 0) / 4294967296;
+  };
+}
+
+// ═══ Color helpers ═════════════════════════════════════════════════════
+function palRGB(key, t) {
+  const p = PAL[key] || PAL.acid;
+  t = Math.max(0, Math.min(0.9999, t));
+  const n = p.length - 1, i = Math.floor(t*n), f = t*n - i;
+  const a = p[i], b = p[i+1];
+  return [a[0]+(b[0]-a[0])*f|0, a[1]+(b[1]-a[1])*f|0, a[2]+(b[2]-a[2])*f|0];
+}
+const rgb  = (r,g,b,a=1) => a<1 ? `rgba(${r},${g},${b},${a})` : `rgb(${r},${g},${b})`;
+const cstr = (key, t, a=1) => { const [r,g,b]=palRGB(key,t); return rgb(r,g,b,a); };
+
+// ═══ Noise ════════════════════════════════════════════════════════════
+function h2(x,y,s){ let n=Math.sin(x*127.1+y*311.7+s*74.3)*43758.5453; return n-Math.floor(n); }
+function sn(x,y,s){
+  let ix=x|0, iy=y|0, fx=x-ix, fy=y-iy;
+  fx=fx*fx*(3-2*fx); fy=fy*fy*(3-2*fy);
+  return h2(ix,iy,s)+(h2(ix+1,iy,s)-h2(ix,iy,s))*fx
+        +(h2(ix,iy+1,s)-h2(ix,iy,s))*fy
+        +(h2(ix,iy,s)-h2(ix+1,iy,s)-h2(ix,iy+1,s)+h2(ix+1,iy+1,s))*fx*fy;
+}
+function fbm(x,y,s,o=4){
+  let v=0,a=0.5,f=1,t=0;
+  for(let i=0;i<o;i++){v+=sn(x*f,y*f,s+i*137)*a;t+=a;a*=0.5;f*=2.1;}
+  return v/t;
+}
+
+// ═══ Canvas resize ════════════════════════════════════════════════════
+function resizeCanvas() {
+  const vw = window.innerWidth, vh = window.innerHeight;
+  if (orient === 'portrait' && vw > vh) {
+    W = vh; H = vw;
+    canvas.width = W; canvas.height = H;
+    canvas.style.transformOrigin = 'top left';
+    canvas.style.transform = `rotate(90deg) translateY(-${vw}px)`;
+    canvas.style.width = H+'px'; canvas.style.height = W+'px';
+  } else {
+    W = vw; H = vh;
+    canvas.width = W; canvas.height = H;
+    canvas.style.transform = '';
+    canvas.style.width = W+'px'; canvas.style.height = H+'px';
+  }
+}
+
+// ═══ Offscreen helper ════════════════════════════════════════════════
+function mkoff(w,h) {
+  const o = document.createElement('canvas');
+  o.width=w; o.height=h; return o;
+}
+
+// ═══ ALGORITHMS ══════════════════════════════════════════════════════
+
+function renderAttractor(p) {
+  const rng=mkrng(p.seed), cplx=p.complexity;
+  const a=-2+rng()*4, b=-2+rng()*4, c=-2+rng()*4, d=-2+rng()*4;
+  const iters = cplx*700000|0;
+  let x=rng()*2-1, y=rng()*2-1;
+  for(let i=0;i<500;i++){const nx=Math.sin(a*y)+c*Math.cos(a*x),ny=Math.sin(b*x)+d*Math.cos(b*y);x=nx;y=ny;}
+  let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
+  const sx=new Float32Array(5000),sy=new Float32Array(5000);
+  for(let i=0;i<5000;i++){const nx=Math.sin(a*y)+c*Math.cos(a*x),ny=Math.sin(b*x)+d*Math.cos(b*y);x=nx;y=ny;sx[i]=x;sy[i]=y;if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;}
+  const rw=x1-x0||1, rh=y1-y0||1, sc=Math.min(W/rw/1.15,H/rh/1.15);
+  const ox=W/2-(x0+rw/2)*sc, oy=H/2-(y0+rh/2)*sc;
+  const dens=new Uint32Array(W*H);
+  for(let i=0;i<iters;i++){const nx=Math.sin(a*y)+c*Math.cos(a*x),ny=Math.sin(b*x)+d*Math.cos(b*y);x=nx;y=ny;const px=(x*sc+ox)|0,py=(y*sc+oy)|0;if(px>=0&&px<W&&py>=0&&py<H)dens[py*W+px]++;}
+  const id=ctx.createImageData(W,H);
+  let mx=0; for(let i=0;i<W*H;i++) if(dens[i]>mx)mx=dens[i];
+  const lm=Math.log(mx+1);
+  for(let i=0;i<W*H;i++) if(dens[i]>0){const t=Math.log(dens[i]+1)/lm;const[r,g,b]=palRGB(p.palette,t);const j=i*4;id.data[j]=r;id.data[j+1]=g;id.data[j+2]=b;id.data[j+3]=255;}
+  ctx.putImageData(id,0,0);
+}
+
+function renderHarmonograph(p) {
+  const rng=mkrng(p.seed), cplx=p.complexity;
+  ctx.fillStyle=cstr(p.palette,.02); ctx.fillRect(0,0,W,H);
+  const n=1+Math.floor(cplx*.5);
+  for(let ci=0;ci<n;ci++){
+    const f1=1+rng()*6,f2=1+rng()*6,f3=1+rng()*6,f4=1+rng()*6;
+    const q1=rng()*Math.PI*2,q2=rng()*Math.PI*2,q3=rng()*Math.PI*2,q4=rng()*Math.PI*2;
+    const d1=.002+rng()*.007,d2=.002+rng()*.007,d3=.002+rng()*.007,d4=.002+rng()*.007;
+    const sx=W*.43, sy=H*.43;
+    ctx.beginPath();
+    for(let i=0;i<=80000;i++){
+      const t=i*.05;
+      const x=W/2+sx*(Math.sin(f1*t+q1)*Math.exp(-d1*t)+Math.sin(f2*t+q2)*Math.exp(-d2*t));
+      const y=H/2+sy*(Math.sin(f3*t+q3)*Math.exp(-d3*t)+Math.sin(f4*t+q4)*Math.exp(-d4*t));
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    const t=ci/Math.max(1,n-1);
+    ctx.strokeStyle=cstr(p.palette,.3+t*.6,.28+cplx*.03);
+    ctx.lineWidth=.5+rng()*1.5; ctx.stroke();
+  }
+}
+
+function renderSubdivision(p) {
+  const rng=mkrng(p.seed), cplx=p.complexity;
+  ctx.fillStyle=cstr(p.palette,.04); ctx.fillRect(0,0,W,H);
+  const maxD=3+Math.floor(cplx*.8);
+  function sub(x,y,w,h,d,co){
+    if(d<=0||w<5||h<5){
+      const t=(co+rng()*.18)%1;
+      const[r,g,b]=palRGB(p.palette,t);
+      ctx.fillStyle=rgb(r,g,b); ctx.fillRect(x,y,w,h);
+      ctx.strokeStyle='rgba(0,0,0,.25)'; ctx.lineWidth=1; ctx.strokeRect(x+.5,y+.5,w-1,h-1);
+      return;
+    }
+    if(rng()<.5&&w>50){
+      const s=w*(rng()>.4?.35+rng()*.3:.5);
+      sub(x,y,s,h,d-1,co); sub(x+s,y,w-s,h,d-1,co+.08+rng()*.18);
+    } else if(h>50){
+      const s=h*(rng()>.4?.35+rng()*.3:.5);
+      sub(x,y,w,s,d-1,co); sub(x,y+s,w,h-s,d-1,co+.08+rng()*.18);
+    } else {
+      const t=(co+rng()*.2)%1;
+      const[r,g,b]=palRGB(p.palette,t);
+      ctx.fillStyle=rgb(r,g,b); ctx.fillRect(x,y,w,h);
+      ctx.strokeStyle='rgba(0,0,0,.2)'; ctx.lineWidth=1; ctx.strokeRect(x+.5,y+.5,w-1,h-1);
+    }
+  }
+  sub(0,0,W,H,maxD,rng()*.4);
+}
+
+function renderFourier(p) {
+  const rng=mkrng(p.seed), cplx=p.complexity;
+  ctx.fillStyle=cstr(p.palette,.02); ctx.fillRect(0,0,W,H);
+  const nc=2+Math.floor(cplx*.5), nk=4+Math.floor(cplx*1.8);
+  for(let ci=0;ci<nc;ci++){
+    const comps=Array.from({length:nk},()=>({
+      r:(.04+rng()*.28)*Math.min(W,H),
+      f:Math.floor(1+rng()*14)*(rng()>.5?1:-1),
+      ph:rng()*Math.PI*2,
+    }));
+    ctx.beginPath();
+    for(let i=0;i<=2400;i++){
+      const t=i/2400*Math.PI*2;
+      let x=W/2,y=H/2;
+      for(const k of comps){x+=k.r*Math.cos(k.f*t+k.ph);y+=k.r*Math.sin(k.f*t+k.ph);}
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.closePath();
+    const t=ci/Math.max(1,nc-1);
+    ctx.strokeStyle=cstr(p.palette,.25+t*.7,.35+cplx*.04);
+    ctx.lineWidth=.8+rng()*.8; ctx.stroke();
+  }
+}
+
+function renderPlasma(p) {
+  const rng=mkrng(p.seed), scale=2;
+  const iw=Math.ceil(W/scale), ih=Math.ceil(H/scale);
+  const id=new ImageData(iw,ih);
+  const f1=1+rng()*5,f2=1+rng()*5,f3=1+rng()*4,f4=1+rng()*4;
+  const cx=.2+rng()*.6,cy=.2+rng()*.6, ph1=rng()*Math.PI*2,ph2=rng()*Math.PI*2;
+  for(let y=0;y<ih;y++) for(let x=0;x<iw;x++){
+    const nx=x/iw, ny=y/ih;
+    const v=(Math.sin(nx*f1*Math.PI*2+ph1)+Math.sin(ny*f2*Math.PI*2+ph2)
+            +Math.sin((nx+ny)*f3*Math.PI*2)+Math.sin(Math.sqrt((nx-cx)**2+(ny-cy)**2)*f4*Math.PI*7))/4;
+    const[r,g,b]=palRGB(p.palette,(v+1)/2);
+    const j=(y*iw+x)*4; id.data[j]=r;id.data[j+1]=g;id.data[j+2]=b;id.data[j+3]=255;
+  }
+  const off=mkoff(iw,ih); off.getContext('2d').putImageData(id,0,0);
+  ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+  ctx.drawImage(off,0,0,W,H);
+}
+
+function renderDomainWarp(p) {
+  const cplx=p.complexity, s=p.seed, scale=2;
+  const iw=Math.ceil(W/scale), ih=Math.ceil(H/scale);
+  const id=new ImageData(iw,ih);
+  const ws=.5+cplx*.18;
+  for(let y=0;y<ih;y++) for(let x=0;x<iw;x++){
+    const nx=x/iw*3, ny=y/ih*3;
+    const wx1=fbm(nx+.5,ny+9.2,s)*ws, wy1=fbm(nx+3.7,ny+2.1,s+500)*ws;
+    const wx2=fbm(nx+wx1,ny+wy1,s+1000)*ws*.5, wy2=fbm(nx+wy1,ny+wx1,s+1500)*ws*.5;
+    const v=fbm(nx+wx2,ny+wy2,s+9999,5+Math.floor(cplx*.3));
+    const[r,g,b]=palRGB(p.palette,Math.max(0,Math.min(1,v)));
+    const j=(y*iw+x)*4; id.data[j]=r;id.data[j+1]=g;id.data[j+2]=b;id.data[j+3]=255;
+  }
+  const off=mkoff(iw,ih); off.getContext('2d').putImageData(id,0,0);
+  ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+  ctx.drawImage(off,0,0,W,H);
+}
+
+function renderMandala(p) {
+  const rng=mkrng(p.seed), scale=2, s=p.seed;
+  const iw=Math.ceil(W/scale), ih=Math.ceil(H/scale);
+  const id=new ImageData(iw,ih);
+  const folds=[4,5,6,7,8,9,12][Math.floor(rng()*7)];
+  const sec=Math.PI*2/folds;
+  const style=Math.floor(rng()*3);
+  const layers=2+Math.floor(rng()*3);
+  for(let y=0;y<ih;y++) for(let x=0;x<iw;x++){
+    const nx=x/iw-.5, ny=y/ih-.5;
+    const dist=Math.sqrt(nx*nx+ny*ny)*2;
+    let fa=((Math.atan2(ny,nx)%sec)+sec)%sec;
+    if(fa>sec/2) fa=sec-fa;
+    const fx=Math.cos(fa)*dist*.5+.5, fy=Math.sin(fa)*dist*.5+.5;
+    let t;
+    if(style===0) t=fbm(fx*4,fy*4,s,4+layers)*.85+dist*.08;
+    else if(style===1) t=((dist*(5+layers))%1+(fa/sec*folds*2)%1)*.5;
+    else { const w=fbm(fx*2.5,fy*2.5,s+999,3)*.3; t=fbm(fx+w,fy+w,s+500,4+layers)*.9+dist*.05; }
+    t*=Math.max(0,1-(dist-.85)*8);
+    const[r,g,b]=palRGB(p.palette,Math.max(0,Math.min(1,t)));
+    const j=(y*iw+x)*4; id.data[j]=r;id.data[j+1]=g;id.data[j+2]=b;id.data[j+3]=255;
+  }
+  const off=mkoff(iw,ih); off.getContext('2d').putImageData(id,0,0);
+  ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+  ctx.drawImage(off,0,0,W,H);
+}
+
+function renderReactionDiffusion(p, done) {
+  const rng=mkrng(p.seed), cplx=p.complexity;
+  drawPlaceholder(p.palette, p.seed);
+  const gw=160, gh=Math.floor(160*H/W)|0;
+  const regimes=[{f:.035,k:.065},{f:.055,k:.062},{f:.025,k:.050},{f:.040,k:.060},{f:.030,k:.057}];
+  const {f,k}=regimes[Math.floor(rng()*regimes.length)];
+  const iters=200+cplx*60|0;
+  // Pre-allocate swap buffers — no allocation in the hot loop
+  let A=new Float32Array(gw*gh).fill(1), B=new Float32Array(gw*gh);
+  let nA=new Float32Array(gw*gh), nB=new Float32Array(gw*gh);
+  for(let i=0;i<6+cplx;i++){
+    const sx=rng()*gw|0, sy=rng()*gh|0, sr=3+rng()*10|0;
+    for(let dy=-sr;dy<sr;dy++) for(let dx=-sr;dx<sr;dx++){
+      const nx=((sx+dx)%gw+gw)%gw, ny=((sy+dy)%gh+gh)%gh;
+      B[ny*gw+nx]=.5+rng()*.5; A[ny*gw+nx]=0;
+    }
+  }
+  let iter=0;
+  function chunk(){
+    if(cancelFlag){done();return;}
+    for(let c=0;c<20&&iter<iters;c++,iter++){
+      for(let y=0;y<gh;y++) for(let x=0;x<gw;x++){
+        const i=y*gw+x;
+        const xl=((x-1)+gw)%gw,xr=(x+1)%gw,yu=((y-1)+gh)%gh,yd=(y+1)%gh;
+        const lA=A[yu*gw+x]+A[yd*gw+x]+A[y*gw+xl]+A[y*gw+xr]-4*A[i];
+        const lB=B[yu*gw+x]+B[yd*gw+x]+B[y*gw+xl]+B[y*gw+xr]-4*B[i];
+        const a=A[i],b=B[i],ab2=a*b*b;
+        nA[i]=Math.max(0,Math.min(1,a+(lA-ab2+f*(1-a))));
+        nB[i]=Math.max(0,Math.min(1,b+(.5*lB+ab2-(k+f)*b)));
+      }
+      const tmp=A;A=nA;nA=tmp; const tmp2=B;B=nB;nB=tmp2;
+    }
+    if(iter<iters){setTimeout(chunk,0);}
+    else{
+      const id=new ImageData(gw,gh);
+      for(let i=0;i<gw*gh;i++){const[r,g,b]=palRGB(p.palette,B[i]);const j=i*4;id.data[j]=r;id.data[j+1]=g;id.data[j+2]=b;id.data[j+3]=255;}
+      const off=mkoff(gw,gh); off.getContext('2d').putImageData(id,0,0);
+      ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+      ctx.drawImage(off,0,0,W,H); done();
+    }
+  }
+  chunk();
+}
+
+function renderFractalIFS(p) {
+  const rng=mkrng(p.seed), cplx=p.complexity;
+  const n=3+Math.floor(rng()*4);
+  const tfs=Array.from({length:n},()=>{
+    const a=rng()*1.4-.7,b=rng()*1.4-.7,c=rng()*1.4-.7,d2=rng()*1.4-.7;
+    const det=Math.abs(a*d2-b*c);
+    return {a:a*(det>.01?.7/det:.5),b:b*(det>.01?.7/det:.5),c:c*(det>.01?.7/det:.5),d:d2*(det>.01?.7/det:.5),e:rng()*2-1,f:rng()*2-1,w:.1+rng()*.9};
+  });
+  const tw=tfs.reduce((s,t)=>s+t.w,0); tfs.forEach(t=>t.w/=tw);
+  const iters=cplx*300000|0;
+  let x=0,y=0;
+  let bx0=Infinity,bx1=-Infinity,by0=Infinity,by1=-Infinity;
+  for(let i=0;i<3000;i++){
+    let r=rng(),cum=0,tf=tfs[0];
+    for(const t of tfs){cum+=t.w;if(r<cum){tf=t;break;}}
+    const nx=tf.a*x+tf.b*y+tf.e, ny=tf.c*x+tf.d*y+tf.f; x=nx;y=ny;
+    if(i>50){if(x<bx0)bx0=x;if(x>bx1)bx1=x;if(y<by0)by0=y;if(y>by1)by1=y;}
+  }
+  const bw=bx1-bx0||1, bh=by1-by0||1, sc=Math.min(W/bw,H/bh)*.85;
+  const ox=W/2-(bx0+bw/2)*sc, oy=H/2-(by0+bh/2)*sc;
+  const dens=new Uint32Array(W*H);
+  for(let i=0;i<iters;i++){
+    let r=rng(),cum=0,tf=tfs[0];
+    for(const t of tfs){cum+=t.w;if(r<cum){tf=t;break;}}
+    const nx=tf.a*x+tf.b*y+tf.e, ny=tf.c*x+tf.d*y+tf.f; x=nx;y=ny;
+    const px=(x*sc+ox)|0, py=(y*sc+oy)|0;
+    if(px>=0&&px<W&&py>=0&&py<H) dens[py*W+px]++;
+  }
+  const id=ctx.createImageData(W,H);
+  let mx=0; for(let i=0;i<W*H;i++) if(dens[i]>mx)mx=dens[i];
+  const lm=Math.log(mx+1);
+  for(let i=0;i<W*H;i++) if(dens[i]>0){const t=Math.log(dens[i]+1)/lm;const[r,g,b]=palRGB(p.palette,t);const j=i*4;id.data[j]=r;id.data[j+1]=g;id.data[j+2]=b;id.data[j+3]=255;}
+  ctx.putImageData(id,0,0);
+}
+
+function renderFlowField(p) {
+  const rng=mkrng(p.seed), cplx=p.complexity, s=p.seed;
+  ctx.fillStyle=cstr(p.palette,.03); ctx.fillRect(0,0,W,H);
+  const np=cplx*700|0, steps=75+cplx*18, ss=Math.min(W,H)*.0045, ns=1.4+rng()*2;
+  for(let i=0;i<np;i++){
+    let x=rng()*W, y=rng()*H; const ct=rng();
+    ctx.strokeStyle=cstr(p.palette,ct,.3+rng()*.25);
+    ctx.lineWidth=.4+rng()*2; ctx.beginPath(); ctx.moveTo(x,y);
+    for(let st=0;st<steps;st++){
+      const a=fbm(x/W*ns,y/H*ns,s,3)*Math.PI*4;
+      x+=Math.cos(a)*ss; y+=Math.sin(a)*ss;
+      if(x<0||x>W||y<0||y>H) break;
+      ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+  }
+}
+
+function renderSpaceColonization(p) {
+  const rng=mkrng(p.seed), cplx=p.complexity;
+  ctx.fillStyle=cstr(p.palette,.02); ctx.fillRect(0,0,W,H);
+  const na=cplx*180|0;
+  const sl=Math.min(W,H)*.009, ar=sl*9, kr=sl*2.2;
+  const atts=Array.from({length:na},()=>[rng()*W*1.1-W*.05, rng()*H*.88]);
+  const rx=W*.25+rng()*W*.5;
+  const nodes=[{x:rx,y:H*.95,par:-1,dep:0}];
+  for(let it=0;it<320&&atts.length>0;it++){
+    const ni=new Map();
+    for(let ai=atts.length-1;ai>=0;ai--){
+      const[ax,ay]=atts[ai]; let md=Infinity,mn=-1;
+      for(let k=0;k<nodes.length;k++){
+        const d=Math.hypot(nodes[k].x-ax,nodes[k].y-ay);
+        if(d<kr){mn=-2;break;} if(d<ar&&d<md){md=d;mn=k;}
+      }
+      if(mn===-2){atts.splice(ai,1);continue;}
+      if(mn>=0){if(!ni.has(mn))ni.set(mn,[0,0,0]);const inf=ni.get(mn);const d=Math.hypot(ax-nodes[mn].x,ay-nodes[mn].y)||.001;inf[0]+=(ax-nodes[mn].x)/d;inf[1]+=(ay-nodes[mn].y)/d;inf[2]++;}
+    }
+    if(!ni.size) break;
+    ni.forEach((inf,k)=>{const l=Math.hypot(inf[0],inf[1])||1;nodes.push({x:nodes[k].x+(inf[0]/l)*sl+(rng()-.5)*sl*.3,y:nodes[k].y+(inf[1]/l)*sl+(rng()-.5)*sl*.3,par:k,dep:nodes[k].dep+1});});
+  }
+  const md=nodes.reduce((m,n)=>Math.max(m,n.dep),0)||1;
+  for(let i=1;i<nodes.length;i++){
+    const n=nodes[i],par=nodes[n.par];
+    const t=n.dep/md;
+    ctx.strokeStyle=cstr(p.palette,.18+t*.75,.65+t*.3);
+    ctx.lineWidth=Math.max(.4,(1-t)*3.5+.4);
+    ctx.beginPath(); ctx.moveTo(par.x,par.y); ctx.lineTo(n.x,n.y); ctx.stroke();
+  }
+}
+
+function renderMetaballs(p) {
+  const rng=mkrng(p.seed), cplx=p.complexity, scale=3;
+  const nb=4+Math.floor(cplx*1.3);
+  const balls=Array.from({length:nb},()=>({x:rng()*W,y:rng()*H,r:Math.min(W,H)*(.07+rng()*.2)}));
+  const iw=Math.ceil(W/scale)|0, ih=Math.ceil(H/scale)|0;
+  const id=new ImageData(iw,ih);
+  for(let y=0;y<ih;y++) for(let x=0;x<iw;x++){
+    const wx=x*scale, wy=y*scale;
+    let f=0; for(const b of balls) f+=b.r*b.r/Math.max(1,(wx-b.x)**2+(wy-b.y)**2);
+    const t=Math.min(1,Math.pow(f*.55,.6));
+    const[r,g,b]=palRGB(p.palette,t);
+    const j=(y*iw+x)*4; id.data[j]=r;id.data[j+1]=g;id.data[j+2]=b;id.data[j+3]=255;
+  }
+  const off=mkoff(iw,ih); off.getContext('2d').putImageData(id,0,0);
+  ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+  ctx.drawImage(off,0,0,W,H);
+}
+
+function renderDifferentialGrowth(p, done) {
+  const rng=mkrng(p.seed), cplx=p.complexity;
+  // Draw immediate placeholder so screen is never black
+  drawPlaceholder(p.palette, p.seed);
+  const cx=W/2, cy=H/2, ir=Math.min(W,H)*.07;
+  let pts=Array.from({length:20},(_,i)=>{const a=i/20*Math.PI*2;return{x:cx+Math.cos(a)*ir,y:cy+Math.sin(a)*ir};});
+  const maxP=150+cplx*30|0, desD=Math.min(W,H)*.012;
+  const maxD=desD*2.5, repR=desD*4.5, repS=.6, attS=.4;
+  const iters=60+cplx*15|0;
+  let it=0;
+  function step(){
+    if(cancelFlag){done();return;}
+    for(let s=0;s<3&&it<iters;s++,it++){
+      if(pts.length<maxP){
+        const np=[];
+        for(let i=0;i<pts.length;i++){
+          np.push(pts[i]);
+          const j=(i+1)%pts.length;
+          if(Math.hypot(pts[j].x-pts[i].x,pts[j].y-pts[i].y)>maxD)
+            np.push({x:(pts[i].x+pts[j].x)/2+(rng()-.5)*1.5,y:(pts[i].y+pts[j].y)/2+(rng()-.5)*1.5});
+        }
+        pts=np;
+      }
+      const n=pts.length;
+      const fx=new Float32Array(n), fy=new Float32Array(n);
+      // Only check every 3rd pair to limit O(n²) cost
+      for(let i=0;i<n;i++){
+        for(let j=i+4;j<n-3;j+=2){
+          const dx=pts[i].x-pts[j].x, dy=pts[i].y-pts[j].y;
+          const d=Math.hypot(dx,dy)||.001;
+          if(d<repR){const f=repS*(1-d/repR)/d;fx[i]+=dx*f;fy[i]+=dy*f;fx[j]-=dx*f;fy[j]-=dy*f;}
+        }
+        const pr=(i-1+n)%n, nx2=(i+1)%n;
+        fx[i]+=(pts[pr].x+pts[nx2].x-2*pts[i].x)*attS;
+        fy[i]+=(pts[pr].y+pts[nx2].y-2*pts[i].y)*attS;
+      }
+      for(let i=0;i<n;i++){
+        pts[i].x=Math.max(15,Math.min(W-15,pts[i].x+fx[i]*.45));
+        pts[i].y=Math.max(15,Math.min(H-15,pts[i].y+fy[i]*.45));
+      }
+    }
+    if(it<iters){setTimeout(step,0);}
+    else{
+      ctx.fillStyle=cstr(p.palette,.03); ctx.fillRect(0,0,W,H);
+      ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y);
+      for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x,pts[i].y);
+      ctx.closePath();
+      const gr=ctx.createLinearGradient(0,0,W,H);
+      gr.addColorStop(0,cstr(p.palette,.28,.55)); gr.addColorStop(1,cstr(p.palette,.72,.75));
+      ctx.fillStyle=gr; ctx.fill();
+      ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y);
+      for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x,pts[i].y);
+      ctx.closePath();
+      ctx.strokeStyle=cstr(p.palette,.9,.92); ctx.lineWidth=1.8; ctx.stroke();
+      done();
+    }
+  }
+  step();
+}
+
+// ═══ Placeholder — drawn instantly before async renders ══════════════
+function drawPlaceholder(palKey, seed) {
+  const s=seed;
+  // Quick domain-warp style gradient — never solid, always interesting
+  const iw=Math.ceil(W/8)|0, ih=Math.ceil(H/8)|0;
+  const id=new ImageData(iw,ih);
+  for(let y=0;y<ih;y++) for(let x=0;x<iw;x++){
+    const nx=x/iw*2.5, ny=y/ih*2.5;
+    const wx=fbm(nx+.3,ny+8,s)*0.6, wy=fbm(nx+7,ny+.3,s+400)*0.6;
+    const v=fbm(nx+wx,ny+wy,s+800,3);
+    const[r,g,b]=palRGB(palKey,Math.max(0,Math.min(1,v)));
+    const j=(y*iw+x)*4; id.data[j]=r;id.data[j+1]=g;id.data[j+2]=b;id.data[j+3]=255;
+  }
+  const off=mkoff(iw,ih); off.getContext('2d').putImageData(id,0,0);
+  ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+  ctx.drawImage(off,0,0,W,H);
+}
+
+// ═══ Symmetry ════════════════════════════════════════════════════════
+function applySymmetry(sym) {
+  if(sym==='none') return;
+  const off=mkoff(W,H); off.getContext('2d').drawImage(canvas,0,0);
+  if(sym==='mirror'){
+    ctx.save(); ctx.translate(W,0); ctx.scale(-1,1);
+    ctx.drawImage(off,0,0,W/2,H,0,0,W/2,H); ctx.restore();
+  } else if(sym==='mirrorxy'){
+    ctx.save(); ctx.translate(W,0); ctx.scale(-1,1); ctx.drawImage(off,0,0,W/2,H,0,0,W/2,H); ctx.restore();
+    ctx.save(); ctx.translate(0,H); ctx.scale(1,-1); ctx.drawImage(off,0,0,W,H/2,0,0,W,H/2); ctx.restore();
+    ctx.save(); ctx.translate(W,H); ctx.scale(-1,-1); ctx.drawImage(off,0,0,W/2,H/2,0,0,W/2,H/2); ctx.restore();
+  } else if(sym.startsWith('radial')){
+    const n=+sym.replace('radial',''), a=Math.PI*2/n;
+    for(let i=1;i<n;i++){
+      ctx.save(); ctx.globalAlpha=.75;
+      ctx.translate(W/2,H/2); ctx.rotate(i*a); ctx.translate(-W/2,-H/2);
+      ctx.drawImage(off,0,0); ctx.restore();
+    }
+  }
+}
+
+// ═══ Dispatch ════════════════════════════════════════════════════════
+const ASYNC=['reactiondiffusion','differentialgrowth'];
+function dispatch(p, done) {
+  drawPlaceholder(p.palette, p.seed);
+  const finish=()=>{applySymmetry(p.symmetry);done();};
+  if(p.algorithm==='reactiondiffusion') return renderReactionDiffusion(p,finish);
+  if(p.algorithm==='differentialgrowth') return renderDifferentialGrowth(p,finish);
+  if(p.algorithm==='attractor')         renderAttractor(p);
+  else if(p.algorithm==='harmonograph') renderHarmonograph(p);
+  else if(p.algorithm==='subdivision')  renderSubdivision(p);
+  else if(p.algorithm==='fourier')      renderFourier(p);
+  else if(p.algorithm==='plasma')       renderPlasma(p);
+  else if(p.algorithm==='domainwarp')   renderDomainWarp(p);
+  else if(p.algorithm==='mandala')      renderMandala(p);
+  else if(p.algorithm==='fractalifs')   renderFractalIFS(p);
+  else if(p.algorithm==='flowfield')    renderFlowField(p);
+  else if(p.algorithm==='spacecolonization') renderSpaceColonization(p);
+  else if(p.algorithm==='metaballs')    renderMetaballs(p);
+  finish();
+}
+
+// ═══ History ═════════════════════════════════════════════════════════
+function buildParams() {
+  let fam=document.getElementById('sFam').value;
+  if(fam==='random'){const keys=Object.keys(ALGOS);fam=keys[Math.random()*keys.length|0];}
+  let alg=document.getElementById('sAlg').value;
+  if(alg==='random') alg=ALGOS[fam][Math.random()*ALGOS[fam].length|0];
+  let pal=document.getElementById('sPal').value;
+  if(pal==='random') pal=PAL_KEYS[Math.random()*PAL_KEYS.length|0];
+  return {family:fam,algorithm:alg,palette:pal,complexity:+document.getElementById('sComp').value,
+          symmetry:document.getElementById('sSym').value,orientation:orient,seed:Math.random()*9999999|0};
+}
+
+function generate() {
+  if(busy){cancelFlag=true;setTimeout(generate,60);return;}
+  const params=buildParams();
+  hist=hist.slice(0,hIdx+1); hist.push(params); hIdx=hist.length-1;
+  renderParams(hist[hIdx]);
+}
+
+function renderParams(p) {
+  cancelFlag=false; busy=true;
+  document.getElementById('loading').style.display='block';
+  resizeCanvas();
+  dispatch(p, ()=>{
+    busy=false;
+    document.getElementById('loading').style.display='none';
+    canvas.style.filter=inverted?'invert(1)':'';
+    updateTimeline(); updateNav();
+  });
+}
+
+function goBack()    { if(hIdx>0&&!busy){hIdx--;renderParams(hist[hIdx]);} }
+function goForward() { if(hIdx<hist.length-1&&!busy){hIdx++;renderParams(hist[hIdx]);} }
+
+// ═══ Timeline ════════════════════════════════════════════════════════
+function updateTimeline() {
+  const tl=document.getElementById('timeline'); tl.innerHTML='';
+  const vis=22, start=Math.max(0,Math.min(hIdx-vis/2|0,hist.length-vis));
+  for(let i=start;i<Math.min(hist.length,start+vis);i++){
+    const d=document.createElement('div'); d.className='dot'+(i===hIdx?' cur':'');
+    const mid=PAL[hist[i].palette]; if(mid){const c=mid[Math.floor(mid.length/2)];d.style.background=`rgb(${c[0]},${c[1]},${c[2]})`;}
+    const idx=i; d.onclick=()=>{if(!busy){hIdx=idx;renderParams(hist[idx]);}};
+    tl.appendChild(d);
+  }
+}
+function updateNav() {
+  document.getElementById('bBack').disabled=hIdx<=0;
+  document.getElementById('bFwd').disabled=hIdx>=hist.length-1;
+}
+
+// ═══ UI ══════════════════════════════════════════════════════════════
+function toggleUI() {
+  uiHidden=!uiHidden;
+  const ui=document.getElementById('ui');
+  ui.style.opacity=uiHidden?'0':'1';
+  ui.style.pointerEvents=uiHidden?'none':'';
+  if(uiHidden) document.getElementById('panel').classList.remove('open');
+}
+function toggleInvert() {
+  inverted=!inverted;
+  canvas.style.filter=inverted?'invert(1)':'';
+  document.getElementById('bInv').classList.toggle('lit',inverted);
+}
+function togglePanel() { document.getElementById('panel').classList.toggle('open'); }
+function setOrient(o) {
+  orient=o;
+  document.getElementById('bLand').classList.toggle('on',o==='landscape');
+  document.getElementById('bPort').classList.toggle('on',o==='portrait');
+  resizeCanvas(); if(hist.length>0) renderParams(hist[hIdx]);
+}
+function savePNG() {
+  canvas.toBlob(blob=>{
+    const url=URL.createObjectURL(blob);
+    if(/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) window.open(url,'_blank');
+    else{const a=document.createElement('a');a.href=url;a.download='abstract_'+Date.now()+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+  },'image/png');
+}
+function rebuildAlgos() {
+  const fam=document.getElementById('sFam').value;
+  const sel=document.getElementById('sAlg'); sel.innerHTML='<option value="random">Random</option>';
+  const fams=fam==='random'?Object.keys(ALGOS):[fam];
+  for(const f of fams){
+    const g=document.createElement('optgroup'); g.label=f.charAt(0).toUpperCase()+f.slice(1);
+    for(const a of ALGOS[f]){const o=document.createElement('option');o.value=a;o.textContent=ALGO_NAMES[a]||a;g.appendChild(o);}
+    sel.appendChild(g);
+  }
+}
+
+// ═══ Draggable panel ═════════════════════════════════════════════════
+(function(){
+  const panel=document.getElementById('panel'), hdr=document.getElementById('ph');
+  let drag=false, ox=0, oy=0;
+  const start=e=>{drag=true;const r=panel.getBoundingClientRect();ox=e.clientX-r.left;oy=e.clientY-r.top;panel.style.transition='none';e.preventDefault();};
+  const move=e=>{if(!drag)return;let px=e.clientX-ox,py=e.clientY-oy;px=Math.max(0,Math.min(window.innerWidth-panel.offsetWidth,px));py=Math.max(0,Math.min(window.innerHeight-panel.offsetHeight,py));panel.style.right='auto';panel.style.left=px+'px';panel.style.top=py+'px';};
+  const end=()=>{drag=false;};
+  hdr.addEventListener('mousedown',start);
+  document.addEventListener('mousemove',move);
+  document.addEventListener('mouseup',end);
+  hdr.addEventListener('touchstart',e=>start({clientX:e.touches[0].clientX,clientY:e.touches[0].clientY,preventDefault:()=>e.preventDefault()}),{passive:false});
+  document.addEventListener('touchmove',e=>{if(drag){move({clientX:e.touches[0].clientX,clientY:e.touches[0].clientY});e.preventDefault();}},{passive:false});
+  document.addEventListener('touchend',end);
+})();
+
+// ═══ Init ════════════════════════════════════════════════════════════
+window.addEventListener('resize',()=>{resizeCanvas();if(hist.length>0&&!busy)renderParams(hist[hIdx]);});
+rebuildAlgos(); updateNav(); resizeCanvas(); generate();
+if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+</script>
+</body>
+</html>

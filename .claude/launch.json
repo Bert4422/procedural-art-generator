@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "abstract-art",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-p", "3458", "C:\\Users\\Glurm\\Downloads\\abstract-art""],
+      "port": 3458
+    }
+  ]
+}

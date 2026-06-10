@@ -29,7 +29,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:no
 .btn:hover{background:rgba(0,0,0,.65);color:#fff;border-color:rgba(255,255,255,.22)}
 .btn:active{background:rgba(0,0,0,.8)}
 .btn.lit{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.28);color:#fff}
-#bInv{top:20px;left:20px}
+#bTune{top:20px;left:20px}
+#bInv{bottom:70px;left:20px}
 #bHide{
   top:20px;left:50%;transform:translateX(-50%);
   background:rgba(255,255,255,.02);border-color:rgba(255,255,255,.04);
@@ -114,6 +115,60 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:no
   transition:all .2s;margin-top:3px;
 }
 #pgen:hover{background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.28);color:#fff}
+/* Tune panel — same format as Settings, anchored left */
+#tune{
+  position:fixed;top:70px;left:20px;width:272px;
+  background:rgba(7,7,7,.93);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid rgba(255,255,255,.1);border-radius:10px;
+  box-shadow:0 10px 50px rgba(0,0,0,.65);
+  flex-direction:column;overflow:hidden;z-index:200;touch-action:none;
+  display:none;
+}
+#tune.open{display:flex}
+#th{
+  padding:14px 16px;font:11px/1 system-ui,sans-serif;letter-spacing:2.5px;
+  text-transform:uppercase;color:rgba(255,255,255,.35);
+  border-bottom:1px solid rgba(255,255,255,.07);cursor:grab;
+  display:flex;justify-content:space-between;align-items:center;user-select:none;
+}
+#th:active{cursor:grabbing}
+#tclose{color:rgba(255,255,255,.3);cursor:pointer;font-size:17px;line-height:1;padding:0 2px}
+#tclose:hover{color:rgba(255,255,255,.8)}
+#tbody{padding:14px;display:flex;flex-direction:column;gap:13px;overflow-y:auto;max-height:72vh}
+/* Tune-specific inputs */
+.tnuminput{
+  width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+  color:rgba(255,255,255,.72);padding:8px 10px;font:12px system-ui,sans-serif;
+  border-radius:4px;outline:none;
+}
+.tnuminput:focus{border-color:rgba(255,255,255,.28)}
+.tnuminput::placeholder{color:rgba(255,255,255,.2)}
+.tformula{
+  width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+  color:rgba(255,255,255,.78);padding:8px 10px;font:11px 'Courier New',monospace;
+  border-radius:4px;outline:none;resize:none;height:56px;
+}
+.tformula:focus{border-color:rgba(255,255,255,.28)}
+.tformula::placeholder{color:rgba(255,255,255,.18);font-style:italic}
+.tformulavars{
+  font:9.5px system-ui,sans-serif;color:rgba(255,255,255,.22);
+  letter-spacing:.3px;line-height:1.5;margin-top:2px;
+}
+.tformulavars b{color:rgba(255,255,255,.38)}
+#tapply{
+  width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);
+  color:rgba(255,255,255,.8);padding:11px;font:11px system-ui,sans-serif;
+  letter-spacing:2.5px;text-transform:uppercase;cursor:pointer;border-radius:4px;
+  transition:all .2s;margin-top:3px;
+}
+#tapply:hover{background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.28);color:#fff}
+#tapply:disabled{opacity:.3;cursor:default}
+/* Divider label inside tune panel */
+.tsec{
+  font:9px/1 system-ui,sans-serif;letter-spacing:2.5px;text-transform:uppercase;
+  color:rgba(255,255,255,.18);padding:4px 0 2px;border-top:1px solid rgba(255,255,255,.06);
+  margin-top:2px;
+}
 </style>
 </head>
 <body>
@@ -123,8 +178,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:no
 <button class="btn" id="bHide" onclick="toggleUI()">&#9898;</button>
 
 <div id="ui">
-  <button class="btn" id="bInv" onclick="toggleInvert()">Invert</button>
+  <button class="btn" id="bTune" onclick="toggleTune()">Tune</button>
   <button class="btn" id="bOpt" onclick="togglePanel()">Settings</button>
+  <button class="btn" id="bInv" onclick="toggleInvert()">Invert</button>
   <button class="btn" id="bRand" onclick="generate()">Random</button>
   <button class="btn" id="bSave" onclick="savePNG()">Save PNG</button>
   <div id="tlwrap">
@@ -222,6 +278,41 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:no
   </div>
 </div>
 
+<!-- ══ Tune panel ══════════════════════════════════════════════════ -->
+<div id="tune">
+  <div id="th"><span>Tune</span><span id="tclose" onclick="toggleTune()">×</span></div>
+  <div id="tbody">
+
+    <!-- Seed lock -->
+    <div class="og">
+      <label>Seed</label>
+      <div class="srow">
+        <input type="number" id="tSeed" class="tnuminput" placeholder="auto (random)"
+               min="0" max="9999999" step="1" style="flex:1">
+        <button onclick="document.getElementById('tSeed').value=''"
+          style="background:none;border:none;color:rgba(255,255,255,.3);font-size:15px;cursor:pointer;padding:0 4px;line-height:1"
+          title="Clear (use random seed)">×</button>
+      </div>
+    </div>
+
+    <!-- Per-algorithm sliders — filled by buildTunePanel() -->
+    <div id="tAlgParams"></div>
+
+    <!-- Math formula -->
+    <div class="og">
+      <div class="tsec">Colour Formula</div>
+      <textarea id="tFormula" class="tformula"
+        placeholder="e.g.  sin(x*8)*cos(y*6)*0.5+0.5&#10;      sqrt((x-.5)*(x-.5)+(y-.5)*(y-.5))*2&#10;      v  (passthrough)"></textarea>
+      <div class="tformulavars">
+        <b>x y</b> coords 0–1 &nbsp;·&nbsp; <b>v</b> raw value &nbsp;·&nbsp; <b>s</b> seed<br>
+        <b>sin cos tan sqrt abs pow log floor PI</b>
+      </div>
+    </div>
+
+    <button id="tapply" onclick="applyTune()">Apply &amp; Generate</button>
+  </div>
+</div>
+
 <script>
 // ═══ Canvas & State ═══════════════════════════════════════════════════
 const canvas = document.getElementById('c');
@@ -232,6 +323,58 @@ let inverted = false;
 let uiHidden = false;
 let hist     = [], hIdx = -1;
 let busy     = false, cancelFlag = false;
+
+// ═══ Per-algorithm tune parameter definitions ═════════════════════════
+const ALG_PARAMS = {
+  attractor:          [],
+  harmonograph: [
+    {id:'freqMax',    label:'Freq Range',    min:2,    max:14,   step:0.5,  def:7,    fmt:v=>v.toFixed(1)},
+    {id:'dampScale',  label:'Damping',       min:0.2,  max:3,    step:0.1,  def:1,    fmt:v=>v.toFixed(1)},
+  ],
+  subdivision: [
+    {id:'splitBias',  label:'H / V Bias',   min:0,    max:1,    step:0.05, def:0.5,  fmt:v=>v.toFixed(2)},
+    {id:'colorDrift', label:'Colour Drift',  min:0.02, max:0.5,  step:0.02, def:0.18, fmt:v=>v.toFixed(2)},
+  ],
+  fourier: [
+    {id:'freqMax',    label:'Freq Range',    min:2,    max:22,   step:1,    def:16,   fmt:v=>v|0},
+    {id:'harmonics',  label:'Harmonics',     min:2,    max:16,   step:1,    def:5,    fmt:v=>v|0},
+  ],
+  plasma: [
+    {id:'freqScale',  label:'Frequency',     min:0.3,  max:3,    step:0.1,  def:1,    fmt:v=>v.toFixed(1)},
+    {id:'gamma',      label:'Contrast',      min:0.3,  max:1.6,  step:0.05, def:0.82, fmt:v=>v.toFixed(2)},
+  ],
+  domainwarp: [
+    {id:'warpStr',    label:'Warp Strength', min:0.1,  max:2.5,  step:0.1,  def:1,    fmt:v=>v.toFixed(1)},
+    {id:'octBonus',   label:'Detail',        min:0,    max:5,    step:1,    def:0,    fmt:v=>v|0},
+  ],
+  mandala: [
+    {id:'folds',      label:'Fold Count',    type:'select', options:[4,5,6,7,8,9,12], def:6},
+    {id:'gamma',      label:'Contrast',      min:0.3,  max:1.5,  step:0.05, def:0.85, fmt:v=>v.toFixed(2)},
+  ],
+  reactiondiffusion: [
+    {id:'rdF',        label:'Feed Rate',     min:0.01, max:0.08, step:0.001,def:0.035,fmt:v=>v.toFixed(3)},
+    {id:'rdK',        label:'Kill Rate',     min:0.04, max:0.075,step:0.001,def:0.065,fmt:v=>v.toFixed(3)},
+  ],
+  fractalifs: [
+    {id:'tfCount',    label:'Transforms',    min:2,    max:8,    step:1,    def:4,    fmt:v=>v|0},
+  ],
+  flowfield: [
+    {id:'noiseScale', label:'Noise Scale',   min:0.3,  max:5,    step:0.1,  def:1,    fmt:v=>v.toFixed(1)},
+    {id:'stepScale',  label:'Step Size',     min:0.3,  max:3,    step:0.1,  def:1,    fmt:v=>v.toFixed(1)},
+  ],
+  spacecolonization: [
+    {id:'reach',      label:'Branch Reach',  min:0.3,  max:3,    step:0.1,  def:1,    fmt:v=>v.toFixed(1)},
+    {id:'segScale',   label:'Seg Length',    min:0.3,  max:3,    step:0.1,  def:1,    fmt:v=>v.toFixed(1)},
+  ],
+  metaballs: [
+    {id:'iso',        label:'Blob Surface',  min:0.4,  max:1.4,  step:0.02, def:0.82, fmt:v=>v.toFixed(2)},
+    {id:'sizeScale',  label:'Blob Size',     min:0.4,  max:2.5,  step:0.1,  def:1,    fmt:v=>v.toFixed(1)},
+  ],
+  differentialgrowth: [
+    {id:'repScale',   label:'Repulsion',     min:0.3,  max:3,    step:0.1,  def:1,    fmt:v=>v.toFixed(1)},
+    {id:'distScale',  label:'Spacing',       min:0.3,  max:3,    step:0.1,  def:1,    fmt:v=>v.toFixed(1)},
+  ],
+};
 
 // ═══ Algorithms ═══════════════════════════════════════════════════════
 const ALGOS = {
@@ -334,6 +477,113 @@ function mkoff(w,h) {
   o.width=w; o.height=h; return o;
 }
 
+// ═══ Tune panel ══════════════════════════════════════════════════════
+function toggleTune() {
+  const el = document.getElementById('tune');
+  el.classList.toggle('open');
+  if (el.classList.contains('open')) {
+    const alg = hIdx >= 0 ? hist[hIdx].algorithm : '';
+    buildTunePanel(alg);
+  }
+  document.getElementById('bTune').classList.toggle('lit', el.classList.contains('open'));
+}
+
+function buildTunePanel(alg) {
+  const box = document.getElementById('tAlgParams');
+  box.innerHTML = '';
+  const defs = ALG_PARAMS[alg] || [];
+  if (defs.length === 0) {
+    if (alg) {
+      box.innerHTML = '<div class="tsec" style="margin-top:0;border-top:none;color:rgba(255,255,255,.15)">No extra parameters for this algorithm</div>';
+    }
+    return;
+  }
+  // Section label
+  const sec = document.createElement('div');
+  sec.className = 'tsec';
+  sec.style.marginTop = '0'; sec.style.borderTop = 'none';
+  sec.textContent = (ALGO_NAMES[alg] || alg) + ' Parameters';
+  box.appendChild(sec);
+
+  for (const d of defs) {
+    const wrap = document.createElement('div');
+    wrap.className = 'og';
+    const lbl = document.createElement('label');
+    lbl.textContent = d.label;
+    wrap.appendChild(lbl);
+
+    if (d.type === 'select') {
+      const sel = document.createElement('select');
+      sel.id = 'tp_'+d.id; sel.className = ''; // inherit .og select
+      sel.style.cssText = 'width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.72);padding:8px 10px;font:12px system-ui,sans-serif;border-radius:4px;cursor:pointer;-webkit-appearance:none;appearance:none;outline:none';
+      for (const o of d.options) {
+        const opt = document.createElement('option');
+        opt.value = o; opt.textContent = o;
+        opt.style.background = '#1a1a1a';
+        if (o === d.def) opt.selected = true;
+        sel.appendChild(opt);
+      }
+      wrap.appendChild(sel);
+    } else {
+      const row = document.createElement('div');
+      row.className = 'srow';
+      const inp = document.createElement('input');
+      inp.type = 'range'; inp.id = 'tp_'+d.id;
+      inp.min = d.min; inp.max = d.max; inp.step = d.step; inp.value = d.def;
+      inp.style.cssText = 'flex:1;background:rgba(255,255,255,.1);border:none;border-radius:2px;height:4px;accent-color:rgba(255,255,255,.6);cursor:pointer';
+      const val = document.createElement('span');
+      val.className = 'sv'; val.style.width = '32px';
+      val.textContent = d.fmt ? d.fmt(d.def) : d.def;
+      inp.addEventListener('input', ()=>{ val.textContent = d.fmt ? d.fmt(+inp.value) : inp.value; });
+      row.appendChild(inp); row.appendChild(val);
+      wrap.appendChild(row);
+    }
+    box.appendChild(wrap);
+  }
+}
+
+function readTuneParams(alg) {
+  const out = {};
+  const sv = document.getElementById('tSeed').value.trim();
+  if (sv !== '') out.seed = Math.max(0, Math.min(9999999, parseInt(sv)|0));
+  const defs = ALG_PARAMS[alg] || [];
+  for (const d of defs) {
+    const el = document.getElementById('tp_'+d.id);
+    if (!el) continue;
+    out[d.id] = d.type === 'select' ? parseInt(el.value) : parseFloat(el.value);
+  }
+  const formula = document.getElementById('tFormula').value.trim();
+  if (formula) out.formula = formula;
+  return out;
+}
+
+function applyTune() {
+  if (busy) return;
+  const base = hIdx >= 0 ? {...hist[hIdx]} : buildParams();
+  const tune = readTuneParams(base.algorithm);
+  if (tune.seed !== undefined) base.seed = tune.seed;
+  if (tune.formula !== undefined) base.formula = tune.formula;
+  else delete base.formula;
+  base.tune = tune;
+  hist = hist.slice(0, hIdx+1);
+  hist.push(base);
+  hIdx = hist.length - 1;
+  renderParams(hist[hIdx]);
+}
+
+// Safe math formula evaluator — returns t in [0,1]
+// vars: x,y (0-1 coords), v (algorithm natural value 0-1), s (seed)
+function evalFormula(formula, x, y, v, s) {
+  try {
+    // eslint-disable-next-line no-new-func
+    const result = new Function('x','y','v','s','sin','cos','tan','sqrt','abs','pow','log','floor','ceil','PI',
+      '"use strict";return (' + formula + ');'
+    )(x, y, v, s, Math.sin, Math.cos, Math.tan, Math.sqrt, Math.abs, Math.pow, Math.log, Math.floor, Math.ceil, Math.PI);
+    if (typeof result !== 'number' || !isFinite(result)) return v;
+    return Math.max(0, Math.min(1, result));
+  } catch(e) { return v; }
+}
+
 // ═══ Render helpers ══════════════════════════════════════════════════
 // Rich radial gradient background using darkest palette tones
 function fillBg(palKey) {
@@ -389,13 +639,15 @@ function renderAttractor(p) {
 
 function renderHarmonograph(p) {
   const rng=mkrng(p.seed), cplx=p.complexity;
+  const freqMax = p.tune?.freqMax ?? 7;
+  const dampScale = p.tune?.dampScale ?? 1;
   fillBg(p.palette);
   const n=2+Math.floor(cplx*.6);
   ctx.globalCompositeOperation='lighter';
   for(let ci=0;ci<n;ci++){
-    const f1=1+rng()*7,f2=1+rng()*7,f3=1+rng()*7,f4=1+rng()*7;
+    const f1=1+rng()*freqMax,f2=1+rng()*freqMax,f3=1+rng()*freqMax,f4=1+rng()*freqMax;
     const q1=rng()*Math.PI*2,q2=rng()*Math.PI*2,q3=rng()*Math.PI*2,q4=rng()*Math.PI*2;
-    const d1=.0012+rng()*.005,d2=.0012+rng()*.005,d3=.0012+rng()*.005,d4=.0012+rng()*.005;
+    const d1=(.0012+rng()*.005)*dampScale,d2=(.0012+rng()*.005)*dampScale,d3=(.0012+rng()*.005)*dampScale,d4=(.0012+rng()*.005)*dampScale;
     const sx=W*.44, sy=H*.44;
     const ct=ci/Math.max(1,n-1);
     // Two layers per curve: soft thick undercoat + fine bright top
@@ -420,10 +672,12 @@ function renderHarmonograph(p) {
 
 function renderSubdivision(p) {
   const rng=mkrng(p.seed), cplx=p.complexity;
+  const splitBias = p.tune?.splitBias ?? 0.5;
+  const colorDrift = p.tune?.colorDrift ?? 0.18;
   fillBg(p.palette);
   const maxD=3+Math.floor(cplx*.8);
   function sub(x,y,w,h,d,co){
-    const t=(co+rng()*.18)%1;
+    const t=(co+rng()*colorDrift)%1;
     if(d<=0||w<6||h<6){
       // Radial gradient fill for depth
       const cx2=x+w/2, cy2=y+h/2, rad=Math.hypot(w,h)*.6;
@@ -434,12 +688,12 @@ function renderSubdivision(p) {
       ctx.strokeStyle='rgba(0,0,0,.18)'; ctx.lineWidth=1; ctx.strokeRect(x+.5,y+.5,w-1,h-1);
       return;
     }
-    if(rng()<.5&&w>50){
+    if(rng()<(1-splitBias)&&w>50){
       const s=w*(rng()>.4?.35+rng()*.3:.5);
-      sub(x,y,s,h,d-1,co); sub(x+s,y,w-s,h,d-1,co+.08+rng()*.18);
+      sub(x,y,s,h,d-1,co); sub(x+s,y,w-s,h,d-1,co+colorDrift*.5+rng()*colorDrift);
     } else if(h>50){
       const s=h*(rng()>.4?.35+rng()*.3:.5);
-      sub(x,y,w,s,d-1,co); sub(x,y+s,w,h-s,d-1,co+.08+rng()*.18);
+      sub(x,y,w,s,d-1,co); sub(x,y+s,w,h-s,d-1,co+colorDrift*.5+rng()*colorDrift);
     } else {
       const cx2=x+w/2, cy2=y+h/2, rad=Math.hypot(w,h)*.6;
       const gr=ctx.createRadialGradient(cx2,cy2,0,cx2,cy2,rad);
@@ -454,13 +708,15 @@ function renderSubdivision(p) {
 
 function renderFourier(p) {
   const rng=mkrng(p.seed), cplx=p.complexity;
+  const freqMax = p.tune?.freqMax ?? 16;
+  const nkOverride = p.tune?.harmonics != null ? (p.tune.harmonics|0) : null;
   fillBg(p.palette);
-  const nc=3+Math.floor(cplx*.6), nk=5+Math.floor(cplx*2);
+  const nc=3+Math.floor(cplx*.6), nk=nkOverride ?? 5+Math.floor(cplx*2);
   ctx.globalCompositeOperation='lighter';
   for(let ci=0;ci<nc;ci++){
     const comps=Array.from({length:nk},()=>({
       r:(.03+rng()*.28)*Math.min(W,H),
-      f:Math.floor(1+rng()*16)*(rng()>.5?1:-1),
+      f:Math.floor(1+rng()*freqMax)*(rng()>.5?1:-1),
       ph:rng()*Math.PI*2,
     }));
     const t=ci/Math.max(1,nc-1);
@@ -491,21 +747,24 @@ function renderFourier(p) {
 
 function renderPlasma(p) {
   const rng=mkrng(p.seed), cplx=p.complexity, scale=1.8;
+  const freqScale = p.tune?.freqScale ?? 1;
+  const gamma = p.tune?.gamma ?? 0.82;
   const iw=Math.ceil(W/scale)|0, ih=Math.ceil(H/scale)|0;
   const id=new ImageData(iw,ih);
-  const f1=1+rng()*6,f2=1+rng()*6,f3=1+rng()*5,f4=1+rng()*5,f5=1+rng()*4,f6=1+rng()*4;
+  const f1=(1+rng()*6)*freqScale,f2=(1+rng()*6)*freqScale,f3=(1+rng()*5)*freqScale,f4=(1+rng()*5)*freqScale,f5=(1+rng()*4)*freqScale,f6=(1+rng()*4)*freqScale;
   const cx=.15+rng()*.7,cy=.15+rng()*.7;
   const ph1=rng()*Math.PI*2,ph2=rng()*Math.PI*2,ph3=rng()*Math.PI*2;
   const turbScale=.4+cplx*.08;
+  const s=p.seed;
   for(let y=0;y<ih;y++) for(let x=0;x<iw;x++){
     const nx=x/iw, ny=y/ih;
-    const v=(Math.sin(nx*f1*Math.PI*2+ph1)
+    let v=(Math.sin(nx*f1*Math.PI*2+ph1)
             +Math.sin(ny*f2*Math.PI*2+ph2)
             +Math.sin((nx+ny)*f3*Math.PI*2)
             +Math.sin(Math.sqrt((nx-cx)**2+(ny-cy)**2)*f4*Math.PI*8)
             +Math.sin((nx*f5-ny*f6)*Math.PI*2+ph3)*turbScale)/( 4+turbScale);
-    // Gamma for richer contrast
-    const tv=Math.pow((v+1)/2, 0.82);
+    let tv=Math.pow((v+1)/2, gamma);
+    if(p.formula) tv=evalFormula(p.formula,nx,ny,tv,s);
     const[r,g,b]=palRGB(p.palette,tv);
     const j=(y*iw+x)*4; id.data[j]=r;id.data[j+1]=g;id.data[j+2]=b;id.data[j+3]=255;
   }
@@ -516,16 +775,18 @@ function renderPlasma(p) {
 
 function renderDomainWarp(p) {
   const cplx=p.complexity, s=p.seed, scale=1.5;
+  const warpStr = p.tune?.warpStr ?? 1;
+  const octBonus = p.tune?.octBonus ?? 0;
   const iw=Math.ceil(W/scale)|0, ih=Math.ceil(H/scale)|0;
   const id=new ImageData(iw,ih);
-  const ws=.55+cplx*.2;
+  const ws=(.55+cplx*.2)*warpStr;
   for(let y=0;y<ih;y++) for(let x=0;x<iw;x++){
     const nx=x/iw*3, ny=y/ih*3;
     const wx1=fbm(nx+.5,ny+9.2,s)*ws, wy1=fbm(nx+3.7,ny+2.1,s+500)*ws;
     const wx2=fbm(nx+wx1,ny+wy1,s+1000)*ws*.55, wy2=fbm(nx+wy1,ny+wx1,s+1500)*ws*.55;
-    const v=fbm(nx+wx2,ny+wy2,s+9999,5+Math.floor(cplx*.35));
-    // Contrast boost + gamma
-    const tv=Math.pow(Math.max(0,Math.min(1,v*1.12+.04)), 0.88);
+    const v=fbm(nx+wx2,ny+wy2,s+9999,5+Math.floor(cplx*.35)+(octBonus|0));
+    let tv=Math.pow(Math.max(0,Math.min(1,v*1.12+.04)), 0.88);
+    if(p.formula) tv=evalFormula(p.formula,x/iw,y/ih,tv,s);
     const[r,g,b]=palRGB(p.palette,tv);
     const j=(y*iw+x)*4; id.data[j]=r;id.data[j+1]=g;id.data[j+2]=b;id.data[j+3]=255;
   }
@@ -536,9 +797,11 @@ function renderDomainWarp(p) {
 
 function renderMandala(p) {
   const rng=mkrng(p.seed), scale=1.5, s=p.seed;
+  const forceFolds = p.tune?.folds;
+  const gamma = p.tune?.gamma ?? 0.85;
   const iw=Math.ceil(W/scale)|0, ih=Math.ceil(H/scale)|0;
   const id=new ImageData(iw,ih);
-  const folds=[4,5,6,7,8,9,12][Math.floor(rng()*7)];
+  const folds=forceFolds ?? [4,5,6,7,8,9,12][Math.floor(rng()*7)];
   const sec=Math.PI*2/folds;
   const style=Math.floor(rng()*3);
   const layers=2+Math.floor(rng()*3);
@@ -554,7 +817,8 @@ function renderMandala(p) {
     else { const w2=fbm(fx*2.5,fy*2.5,s+999,3)*.3; t=fbm(fx+w2,fy+w2,s+500,4+layers)*.9+dist*.05; }
     // Sharper falloff + vignette ring + gamma
     t*=Math.max(0,1-(dist-.82)*10);
-    t=Math.pow(Math.max(0,Math.min(1,t)), 0.85);
+    t=Math.pow(Math.max(0,Math.min(1,t)), gamma);
+    if(p.formula) t=evalFormula(p.formula,x/iw,y/ih,t,s);
     const[r,g,b]=palRGB(p.palette,t);
     const j=(y*iw+x)*4; id.data[j]=r;id.data[j+1]=g;id.data[j+2]=b;id.data[j+3]=255;
   }
@@ -572,7 +836,8 @@ function renderReactionDiffusion(p, done) {
   drawPlaceholder(p.palette, p.seed);
   const gw=160, gh=Math.floor(160*H/W)|0;
   const regimes=[{f:.035,k:.065},{f:.055,k:.062},{f:.025,k:.050},{f:.040,k:.060},{f:.030,k:.057}];
-  const {f,k}=regimes[Math.floor(rng()*regimes.length)];
+  const rdF=p.tune?.rdF, rdK=p.tune?.rdK;
+  const {f,k}=rdF!=null ? {f:rdF,k:rdK??0.065} : regimes[Math.floor(rng()*regimes.length)];
   const iters=200+cplx*60|0;
   // Pre-allocate swap buffers — no allocation in the hot loop
   let A=new Float32Array(gw*gh).fill(1), B=new Float32Array(gw*gh);
@@ -618,7 +883,8 @@ function renderReactionDiffusion(p, done) {
 
 function renderFractalIFS(p) {
   const rng=mkrng(p.seed), cplx=p.complexity;
-  const n=3+Math.floor(rng()*4);
+  const tfCount = p.tune?.tfCount != null ? (p.tune.tfCount|0) : null;
+  const n=tfCount ?? 3+Math.floor(rng()*4);
   const tfs=Array.from({length:n},()=>{
     const a=rng()*1.4-.7,b=rng()*1.4-.7,c=rng()*1.4-.7,d2=rng()*1.4-.7;
     const det=Math.abs(a*d2-b*c);
@@ -661,8 +927,10 @@ function renderFractalIFS(p) {
 
 function renderFlowField(p) {
   const rng=mkrng(p.seed), cplx=p.complexity, s=p.seed;
+  const noiseScale = p.tune?.noiseScale ?? 1;
+  const stepScale = p.tune?.stepScale ?? 1;
   fillBg(p.palette);
-  const np=cplx*900|0, steps=90+cplx*20, ss=Math.min(W,H)*.004, ns=1.2+rng()*2.5;
+  const np=cplx*900|0, steps=90+cplx*20, ss=Math.min(W,H)*.004*stepScale, ns=(1.2+rng()*2.5)*noiseScale;
   ctx.globalCompositeOperation='lighter';
   for(let i=0;i<np;i++){
     let x=rng()*W, y=rng()*H;
@@ -683,9 +951,11 @@ function renderFlowField(p) {
 
 function renderSpaceColonization(p) {
   const rng=mkrng(p.seed), cplx=p.complexity;
+  const reach = p.tune?.reach ?? 1;
+  const segScale = p.tune?.segScale ?? 1;
   fillBg(p.palette);
   const na=cplx*200|0;
-  const sl=Math.min(W,H)*.009, ar=sl*9, kr=sl*2.2;
+  const sl=Math.min(W,H)*.009*segScale, ar=sl*9*reach, kr=sl*2.2;
   const atts=Array.from({length:na},()=>[rng()*W*1.1-W*.05, rng()*H*.88]);
   const rx=W*.25+rng()*W*.5;
   const nodes=[{x:rx,y:H*.95,par:-1,dep:0}];
@@ -722,11 +992,13 @@ function renderSpaceColonization(p) {
 
 function renderMetaballs(p) {
   const rng=mkrng(p.seed), cplx=p.complexity, scale=2.5;
+  const iso = p.tune?.iso ?? 0.82;
+  const sizeScale = p.tune?.sizeScale ?? 1;
+  const s=p.seed;
   const nb=4+Math.floor(cplx*1.4);
-  const balls=Array.from({length:nb},()=>({x:rng()*W,y:rng()*H,r:Math.min(W,H)*(.08+rng()*.22)}));
+  const balls=Array.from({length:nb},()=>({x:rng()*W,y:rng()*H,r:Math.min(W,H)*(.08+rng()*.22)*sizeScale}));
   const iw=Math.ceil(W/scale)|0, ih=Math.ceil(H/scale)|0;
   const id=new ImageData(iw,ih);
-  const iso=0.82;
   for(let y=0;y<ih;y++) for(let x=0;x<iw;x++){
     const wx=x*scale, wy=y*scale;
     let f=0; for(const b of balls) f+=b.r*b.r/Math.max(1,(wx-b.x)**2+(wy-b.y)**2);
@@ -741,6 +1013,7 @@ function renderMetaballs(p) {
     // Highlight ring near isosurface
     const rim=Math.abs(f-iso);
     if(rim<.1) t=Math.min(1,t+(.1-rim)/.1*.22);
+    if(p.formula) t=evalFormula(p.formula,x/iw,y/ih,t,s);
     const[r,g,b]=palRGB(p.palette,t);
     const j=(y*iw+x)*4; id.data[j]=r;id.data[j+1]=g;id.data[j+2]=b;id.data[j+3]=255;
   }
@@ -751,12 +1024,14 @@ function renderMetaballs(p) {
 
 function renderDifferentialGrowth(p, done) {
   const rng=mkrng(p.seed), cplx=p.complexity;
+  const repScale = p.tune?.repScale ?? 1;
+  const distScale = p.tune?.distScale ?? 1;
   // Draw immediate placeholder so screen is never black
   drawPlaceholder(p.palette, p.seed);
   const cx=W/2, cy=H/2, ir=Math.min(W,H)*.07;
   let pts=Array.from({length:20},(_,i)=>{const a=i/20*Math.PI*2;return{x:cx+Math.cos(a)*ir,y:cy+Math.sin(a)*ir};});
-  const maxP=150+cplx*30|0, desD=Math.min(W,H)*.012;
-  const maxD=desD*2.5, repR=desD*4.5, repS=.6, attS=.4;
+  const maxP=150+cplx*30|0, desD=Math.min(W,H)*.012*distScale;
+  const maxD=desD*2.5, repR=desD*4.5, repS=.6*repScale, attS=.4;
   const iters=60+cplx*15|0;
   let it=0;
   function step(){
@@ -890,8 +1165,15 @@ function buildParams() {
   if(alg==='random') alg=ALGOS[fam][Math.random()*ALGOS[fam].length|0];
   let pal=document.getElementById('sPal').value;
   if(pal==='random') pal=RANDOM_PAL_KEYS[Math.random()*RANDOM_PAL_KEYS.length|0];
-  return {family:fam,algorithm:alg,palette:pal,complexity:+document.getElementById('sComp').value,
-          symmetry:document.getElementById('sSym').value,orientation:orient,seed:Math.random()*9999999|0};
+  const p = {family:fam,algorithm:alg,palette:pal,complexity:+document.getElementById('sComp').value,
+             symmetry:document.getElementById('sSym').value,orientation:orient,seed:Math.random()*9999999|0,
+             tune:{}};
+  // Merge tune overrides (seed lock, formula, algorithm knobs)
+  const tune = readTuneParams(p.algorithm);
+  if (tune.seed !== undefined) p.seed = tune.seed;
+  if (tune.formula !== undefined) p.formula = tune.formula;
+  p.tune = tune;
+  return p;
 }
 
 function generate() {
@@ -910,6 +1192,9 @@ function renderParams(p) {
     document.getElementById('loading').style.display='none';
     canvas.style.filter=inverted?'invert(1)':'';
     updateTimeline(); updateNav();
+    // Refresh tune panel sliders when algo changes
+    if (document.getElementById('tune').classList.contains('open'))
+      buildTunePanel(p.algorithm);
   });
 }
 
@@ -958,7 +1243,11 @@ function toggleUI() {
   const ui=document.getElementById('ui');
   ui.style.opacity=uiHidden?'0':'1';
   ui.style.pointerEvents=uiHidden?'none':'';
-  if(uiHidden) document.getElementById('panel').classList.remove('open');
+  if(uiHidden){
+    document.getElementById('panel').classList.remove('open');
+    document.getElementById('tune').classList.remove('open');
+    document.getElementById('bTune').classList.remove('lit');
+  }
 }
 function toggleInvert() {
   inverted=!inverted;
@@ -990,7 +1279,20 @@ function rebuildAlgos() {
   }
 }
 
-// ═══ Draggable panel ═════════════════════════════════════════════════
+// ═══ Draggable panels ════════════════════════════════════════════════
+(function makeDraggable(panel, hdr){
+  let drag=false, ox=0, oy=0;
+  const start=e=>{drag=true;const r=panel.getBoundingClientRect();ox=e.clientX-r.left;oy=e.clientY-r.top;panel.style.transition='none';e.preventDefault();};
+  const move=e=>{if(!drag)return;let px=e.clientX-ox,py=e.clientY-oy;px=Math.max(0,Math.min(window.innerWidth-panel.offsetWidth,px));py=Math.max(0,Math.min(window.innerHeight-panel.offsetHeight,py));panel.style.right='auto';panel.style.left=px+'px';panel.style.top=py+'px';};
+  const end=()=>{drag=false;};
+  hdr.addEventListener('mousedown',start);
+  document.addEventListener('mousemove',move);
+  document.addEventListener('mouseup',end);
+  hdr.addEventListener('touchstart',e=>start({clientX:e.touches[0].clientX,clientY:e.touches[0].clientY,preventDefault:()=>e.preventDefault()}),{passive:false});
+  document.addEventListener('touchmove',e=>{if(drag){move({clientX:e.touches[0].clientX,clientY:e.touches[0].clientY});e.preventDefault();}},{passive:false});
+  document.addEventListener('touchend',end);
+})(document.getElementById('tune'), document.getElementById('th'));
+
 (function(){
   const panel=document.getElementById('panel'), hdr=document.getElementById('ph');
   let drag=false, ox=0, oy=0;

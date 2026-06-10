@@ -18,8 +18,8 @@ Generates procedural abstract art as a fullscreen wallpaper. Every result is uni
 3. Tap **Add to Home Screen** or **Install app**
 4. Tap **Add**
 
-### Desktop (Chrome / Edge)
-1. Open the link above
+### Desktop (Chrome / Edge only)
+1. Open the link above in **Chrome or Edge** — Firefox and Safari do not support installing as an app on desktop
 2. Click the **install icon** in the address bar on the right
 3. Click **Install**
 

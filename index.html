@@ -382,7 +382,7 @@ const ALG_PARAMS = {
 const ALGOS = {
   abstract:    ['attractor','harmonograph','subdivision','fourier'],
   psychedelic: ['plasma','domainwarp','mandala','reactiondiffusion','fractalifs'],
-  organic:     ['flowfield','spacecolonization','metaballs','differentialgrowth'],
+  organic:     ['flowfield','spacecolonization','differentialgrowth'],
 };
 const ALGO_NAMES = {
   attractor:'Strange Attractor', harmonograph:'Harmonograph',
@@ -390,7 +390,7 @@ const ALGO_NAMES = {
   plasma:'Plasma Field', domainwarp:'Domain Warp',
   mandala:'Mandala', reactiondiffusion:'Reaction-Diffusion',
   fractalifs:'Fractal IFS', flowfield:'Flow Field',
-  spacecolonization:'Space Colonization', metaballs:'Metaballs',
+  spacecolonization:'Space Colonization',
   differentialgrowth:'Differential Growth',
 };
 
@@ -760,7 +760,7 @@ function renderFourier(p) {
 }
 
 function renderPlasma(p) {
-  const rng=mkrng(p.seed), cplx=p.complexity, scale=1.8;
+  const rng=mkrng(p.seed), cplx=p.complexity, scale=1;
   const freqScale = p.tune?.freqScale ?? 1;
   const gamma = p.tune?.gamma ?? 0.82;
   const iw=Math.ceil(W/scale)|0, ih=Math.ceil(H/scale)|0;
@@ -788,7 +788,7 @@ function renderPlasma(p) {
 }
 
 function renderDomainWarp(p) {
-  const cplx=p.complexity, s=p.seed, scale=1.5;
+  const cplx=p.complexity, s=p.seed, scale=1;
   const warpStr = p.tune?.warpStr ?? 1;
   const octBonus = p.tune?.octBonus ?? 0;
   const iw=Math.ceil(W/scale)|0, ih=Math.ceil(H/scale)|0;
@@ -810,7 +810,7 @@ function renderDomainWarp(p) {
 }
 
 function renderMandala(p) {
-  const rng=mkrng(p.seed), scale=1.5, s=p.seed;
+  const rng=mkrng(p.seed), scale=1, s=p.seed;
   const forceFolds = p.tune?.folds;
   const gamma = p.tune?.gamma ?? 0.85;
   const iw=Math.ceil(W/scale)|0, ih=Math.ceil(H/scale)|0;

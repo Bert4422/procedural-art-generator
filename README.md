@@ -35,6 +35,7 @@ Once installed it opens fullscreen with no browser UI, just like a native app.
 | **Settings** | Opens the Settings panel to pick algorithm, palette, and complexity |
 | **Invert** | Inverts all colours on screen |
 | **Random** | Generates a new random piece |
+| **Auto Save** | Pick a folder and every generation saves there automatically. Click again to stop. Desktop Chrome and Edge only. |
 | **Save PNG** | Saves the current image |
 | **◎** | Hides and shows all buttons |
 | **← ‹ ○●○ › →** | Navigate generation history. ← → moves back and forward. ‹ › scrolls the history dots. |
@@ -95,8 +96,6 @@ Math functions available: `sin cos tan sqrt abs pow log floor ceil PI`
 | Fractal IFS | Psychedelic |
 | Flow Field | Organic |
 | Space Colonization | Organic |
-| Metaballs | Organic |
-| Differential Growth | Organic |
 
 ---
 

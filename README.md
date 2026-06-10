@@ -1,5 +1,3 @@
-# Abstract
-
 Generates procedural abstract art as a fullscreen wallpaper. Every result is unique.
 
 **[Open the app →](https://bert4422.github.io/procedural-art-generator/)**

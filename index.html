@@ -1220,23 +1220,24 @@ function goBack()    { if(hIdx>0&&!busy){hIdx--;renderParams(hist[hIdx]);} }
 function goForward() { if(hIdx<hist.length-1&&!busy){hIdx++;renderParams(hist[hIdx]);} }
 
 // ═══ Timeline ════════════════════════════════════════════════════════
-const TL_VIS = 14; // dots visible at once
+const TL_VIS = () => window.innerWidth < 768 ? 4 : 14; // 4 on mobile, 14 on desktop
 let tlOffset = 0;  // first visible index in hist
 
 function tlScroll(dir) {
-  const max = Math.max(0, hist.length - TL_VIS);
+  const max = Math.max(0, hist.length - TL_VIS());
   tlOffset = Math.max(0, Math.min(max, tlOffset + dir));
   updateTimeline();
 }
 
 function updateTimeline() {
   // Keep selected dot in view
+  const vis = TL_VIS();
   if (hIdx < tlOffset) tlOffset = hIdx;
-  if (hIdx >= tlOffset + TL_VIS) tlOffset = hIdx - TL_VIS + 1;
-  tlOffset = Math.max(0, Math.min(Math.max(0, hist.length - TL_VIS), tlOffset));
+  if (hIdx >= tlOffset + vis) tlOffset = hIdx - vis + 1;
+  tlOffset = Math.max(0, Math.min(Math.max(0, hist.length - vis), tlOffset));
 
   const tl = document.getElementById('timeline'); tl.innerHTML = '';
-  const end = Math.min(hist.length, tlOffset + TL_VIS);
+  const end = Math.min(hist.length, tlOffset + vis);
   for (let i = tlOffset; i < end; i++) {
     const d = document.createElement('div');
     d.className = 'dot' + (i === hIdx ? ' cur' : '');
@@ -1246,7 +1247,7 @@ function updateTimeline() {
   }
 
   const canLeft  = tlOffset > 0;
-  const canRight = tlOffset + TL_VIS < hist.length;
+  const canRight = tlOffset + vis < hist.length;
   document.getElementById('tlLeft').disabled  = !canLeft;
   document.getElementById('tlRight').disabled = !canRight;
 }

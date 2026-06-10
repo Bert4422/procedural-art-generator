@@ -1125,16 +1125,14 @@ function renderDifferentialGrowth(p, done) {
 // ═══ Placeholder — drawn instantly before async renders ══════════════
 function drawPlaceholder(palKey, seed) {
   const s=seed;
-  // Higher-res domain-warp preview at W/5 — visually richer than W/8
-  const iw=Math.ceil(W/5)|0, ih=Math.ceil(H/5)|0;
+  // Small grid, single warp pass — fast enough to not block the UI
+  const iw=Math.ceil(W/10)|0, ih=Math.ceil(H/10)|0;
   const id=new ImageData(iw,ih);
   for(let y=0;y<ih;y++) for(let x=0;x<iw;x++){
-    const nx=x/iw*2.8, ny=y/ih*2.8;
-    const wx=fbm(nx+.5,ny+8.2,s)*.65, wy=fbm(nx+7.3,ny+.5,s+400)*.65;
-    const wx2=fbm(nx+wx,ny+wy,s+900)*.3, wy2=fbm(nx+wy,ny+wx,s+1200)*.3;
-    const v=fbm(nx+wx2,ny+wy2,s+800,4);
-    const tv=Math.pow(Math.max(0,Math.min(1,v)),0.9);
-    const[r,g,b]=palRGB(palKey,tv);
+    const nx=x/iw*3, ny=y/ih*3;
+    const wx=fbm(nx+.5,ny+8,s,2)*.6, wy=fbm(nx+7,ny+.5,s+400,2)*.6;
+    const v=fbm(nx+wx,ny+wy,s+800,2);
+    const[r,g,b]=palRGB(palKey,Math.max(0,Math.min(1,v)));
     const j=(y*iw+x)*4; id.data[j]=r;id.data[j+1]=g;id.data[j+2]=b;id.data[j+3]=255;
   }
   const off=mkoff(iw,ih); off.getContext('2d').putImageData(id,0,0);
@@ -1203,8 +1201,10 @@ function buildParams() {
   return p;
 }
 
+let pendingGen = false;
 function generate() {
-  if(busy){cancelFlag=true;setTimeout(generate,60);return;}
+  if(busy){ cancelFlag=true; pendingGen=true; return; }
+  pendingGen=false;
   const params=buildParams();
   hist=hist.slice(0,hIdx+1); hist.push(params); hIdx=hist.length-1;
   renderParams(hist[hIdx]);
@@ -1212,18 +1212,23 @@ function generate() {
 
 function renderParams(p) {
   cancelFlag=false; busy=true;
+  // Dim canvas immediately so button feels instant
   canvas.style.opacity='0.35';
   document.getElementById('loading').style.display='block';
-  resizeCanvas();
-  dispatch(p, ()=>{
-    busy=false;
-    document.getElementById('loading').style.display='none';
-    canvas.style.filter=inverted?'invert(1)':'';
-    canvas.style.opacity='1';
-    updateTimeline(); updateNav();
-    // Refresh tune panel sliders when algo changes
-    if (document.getElementById('tune').classList.contains('open'))
-      buildTunePanel(p.algorithm);
+  // Defer heavy work one frame so the browser paints the dim + loading first
+  requestAnimationFrame(()=>{
+    resizeCanvas();
+    dispatch(p, ()=>{
+      busy=false;
+      document.getElementById('loading').style.display='none';
+      canvas.style.filter=inverted?'invert(1)':'';
+      canvas.style.opacity='1';
+      updateTimeline(); updateNav();
+      if (document.getElementById('tune').classList.contains('open'))
+        buildTunePanel(p.algorithm);
+      // If another generate was requested while busy, run it now
+      if(pendingGen) generate();
+    });
   });
 }
 

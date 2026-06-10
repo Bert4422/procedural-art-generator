@@ -629,14 +629,17 @@ function renderAttractor(p) {
   let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
   const sx=new Float32Array(5000),sy=new Float32Array(5000);
   for(let i=0;i<5000;i++){const nx=Math.sin(a*y)+c*Math.cos(a*x),ny=Math.sin(b*x)+d*Math.cos(b*y);x=nx;y=ny;sx[i]=x;sy[i]=y;if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;}
+  // Degenerate seed — fall back to domain warp
+  if(!isFinite(x0)||!isFinite(x1)||!isFinite(y0)||!isFinite(y1)){renderDomainWarp(p);return;}
   const rw=x1-x0||1, rh=y1-y0||1, sc=Math.min(W/rw/1.1,H/rh/1.1);
   const ox=W/2-(x0+rw/2)*sc, oy=H/2-(y0+rh/2)*sc;
   const dens=new Uint32Array(W*H);
   for(let i=0;i<iters;i++){const nx=Math.sin(a*y)+c*Math.cos(a*x),ny=Math.sin(b*x)+d*Math.cos(b*y);x=nx;y=ny;const px=(x*sc+ox)|0,py=(y*sc+oy)|0;if(px>=0&&px<W&&py>=0&&py<H)dens[py*W+px]++;}
-  // Draw gradient background first, then composite density plot on top
   fillBg(p.palette);
   const id=ctx.createImageData(W,H);
   let mx=0; for(let i=0;i<W*H;i++) if(dens[i]>mx)mx=dens[i];
+  // Nothing landed on canvas — fall back
+  if(mx===0){renderDomainWarp(p);return;}
   const lm=Math.log(mx+1);
   for(let i=0;i<W*H;i++){
     if(dens[i]>0){
@@ -914,6 +917,7 @@ function renderFractalIFS(p) {
     const nx=tf.a*x+tf.b*y+tf.e, ny=tf.c*x+tf.d*y+tf.f; x=nx;y=ny;
     if(i>50){if(x<bx0)bx0=x;if(x>bx1)bx1=x;if(y<by0)by0=y;if(y>by1)by1=y;}
   }
+  if(!isFinite(bx0)||!isFinite(bx1)||!isFinite(by0)||!isFinite(by1)){renderDomainWarp(p);return;}
   const bw=bx1-bx0||1, bh=by1-by0||1, sc=Math.min(W/bw,H/bh)*.88;
   const ox=W/2-(bx0+bw/2)*sc, oy=H/2-(by0+bh/2)*sc;
   const dens=new Uint32Array(W*H);
@@ -927,6 +931,7 @@ function renderFractalIFS(p) {
   fillBg(p.palette);
   const id=ctx.createImageData(W,H);
   let mx=0; for(let i=0;i<W*H;i++) if(dens[i]>mx)mx=dens[i];
+  if(mx===0){renderDomainWarp(p);return;}
   const lm=Math.log(mx+1);
   for(let i=0;i<W*H;i++){
     if(dens[i]>0){

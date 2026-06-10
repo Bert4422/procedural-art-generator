@@ -1011,8 +1011,19 @@ function renderMetaballs(p) {
   const iso = p.tune?.iso ?? 0.82;
   const sizeScale = p.tune?.sizeScale ?? 1;
   const s=p.seed;
-  const nb=4+Math.floor(cplx*1.4);
-  const balls=Array.from({length:nb},()=>({x:rng()*W,y:rng()*H,r:Math.min(W,H)*(.08+rng()*.22)*sizeScale}));
+  const nb=6+Math.floor(cplx*1.4); // min 6 so no single blob dominates
+  const minD=Math.min(W,H);
+  const minR=minD*.05, maxR=minD*.12; // was .08–.30, now much tighter ceiling
+  // Grid-based placement — one ball per zone so they always spread across canvas
+  const cols=Math.ceil(Math.sqrt(nb*(W/H))), rows=Math.ceil(nb/cols);
+  const balls=Array.from({length:nb},(_,i)=>{
+    const col=i%cols, row=Math.floor(i/cols);
+    return {
+      x:(col+.15+rng()*.7)/cols*W,
+      y:(row+.15+rng()*.7)/rows*H,
+      r:(minR+rng()*(maxR-minR))*sizeScale
+    };
+  });
   const iw=Math.ceil(W/scale)|0, ih=Math.ceil(H/scale)|0;
   const id=new ImageData(iw,ih);
   for(let y=0;y<ih;y++) for(let x=0;x<iw;x++){

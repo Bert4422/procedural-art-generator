@@ -11,11 +11,13 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:none}
-#c{position:fixed;top:0;left:0;display:block;width:100vw;height:100vh}
+#c{position:fixed;top:0;left:0;display:block;width:100vw;height:100vh;transition:opacity .45s ease}
+@keyframes ldpulse{0%,100%{opacity:.1}50%{opacity:.32}}
 #loading{
   position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
   color:rgba(255,255,255,.22);font:10px/1 system-ui,sans-serif;
   letter-spacing:5px;text-transform:uppercase;pointer-events:none;display:none;
+  animation:ldpulse 1.4s ease-in-out infinite;
 }
 #ui{position:fixed;inset:0;pointer-events:none;transition:opacity .35s}
 #ui>*{pointer-events:all}
@@ -457,17 +459,27 @@ function fbm(x,y,s,o=4){
 // ═══ Canvas resize ════════════════════════════════════════════════════
 function resizeCanvas() {
   const vw = window.innerWidth, vh = window.innerHeight;
+  canvas.style.transform = '';
+  canvas.style.transformOrigin = '';
   if (orient === 'portrait' && vw > vh) {
-    W = vh; H = vw;
+    // Desktop landscape screen in portrait mode:
+    // show a centred 9:16 rectangle with black bars on each side
+    H = vh;
+    W = Math.round(vh * 9 / 16);
+    if (W > vw) { W = vw; H = Math.round(vw * 16 / 9); }
     canvas.width = W; canvas.height = H;
-    canvas.style.transformOrigin = 'top left';
-    canvas.style.transform = `rotate(90deg) translateY(-${vw}px)`;
-    canvas.style.width = H+'px'; canvas.style.height = W+'px';
+    canvas.style.width  = W + 'px';
+    canvas.style.height = H + 'px';
+    canvas.style.left   = Math.round((vw - W) / 2) + 'px';
+    canvas.style.top    = Math.round((vh - H) / 2) + 'px';
   } else {
+    // Landscape, or a real portrait screen — fill it
     W = vw; H = vh;
     canvas.width = W; canvas.height = H;
-    canvas.style.transform = '';
-    canvas.style.width = W+'px'; canvas.style.height = H+'px';
+    canvas.style.width  = W + 'px';
+    canvas.style.height = H + 'px';
+    canvas.style.left   = '0';
+    canvas.style.top    = '0';
   }
 }
 
@@ -621,19 +633,21 @@ function renderAttractor(p) {
   const ox=W/2-(x0+rw/2)*sc, oy=H/2-(y0+rh/2)*sc;
   const dens=new Uint32Array(W*H);
   for(let i=0;i<iters;i++){const nx=Math.sin(a*y)+c*Math.cos(a*x),ny=Math.sin(b*x)+d*Math.cos(b*y);x=nx;y=ny;const px=(x*sc+ox)|0,py=(y*sc+oy)|0;if(px>=0&&px<W&&py>=0&&py<H)dens[py*W+px]++;}
-  // Fill background with deep palette tones first
+  // Draw gradient background first, then composite density plot on top
   fillBg(p.palette);
   const id=ctx.createImageData(W,H);
   let mx=0; for(let i=0;i<W*H;i++) if(dens[i]>mx)mx=dens[i];
   const lm=Math.log(mx+1);
   for(let i=0;i<W*H;i++){
     if(dens[i]>0){
-      const t=Math.pow(Math.log(dens[i]+1)/lm, 0.75); // gamma for brighter mid-tones
+      const t=Math.pow(Math.log(dens[i]+1)/lm, 0.75);
       const[r,g,b]=palRGB(p.palette,t);
       const j=i*4;id.data[j]=r;id.data[j+1]=g;id.data[j+2]=b;id.data[j+3]=255;
     }
+    // alpha=0 pixels are transparent → fillBg gradient shows through
   }
-  ctx.putImageData(id,0,0);
+  const off=mkoff(W,H); off.getContext('2d').putImageData(id,0,0);
+  ctx.drawImage(off,0,0);
   bloom(0.32, 2.5);
 }
 
@@ -920,8 +934,10 @@ function renderFractalIFS(p) {
       const[r,g,b]=palRGB(p.palette,t);
       const j=i*4;id.data[j]=r;id.data[j+1]=g;id.data[j+2]=b;id.data[j+3]=255;
     }
+    // alpha=0 pixels are transparent → fillBg gradient shows through
   }
-  ctx.putImageData(id,0,0);
+  const offifs=mkoff(W,H); offifs.getContext('2d').putImageData(id,0,0);
+  ctx.drawImage(offifs,0,0);
   bloom(0.3,2.5);
 }
 
@@ -1185,12 +1201,14 @@ function generate() {
 
 function renderParams(p) {
   cancelFlag=false; busy=true;
+  canvas.style.opacity='0.35';
   document.getElementById('loading').style.display='block';
   resizeCanvas();
   dispatch(p, ()=>{
     busy=false;
     document.getElementById('loading').style.display='none';
     canvas.style.filter=inverted?'invert(1)':'';
+    canvas.style.opacity='1';
     updateTimeline(); updateNav();
     // Refresh tune panel sliders when algo changes
     if (document.getElementById('tune').classList.contains('open'))
